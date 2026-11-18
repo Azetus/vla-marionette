@@ -92,9 +92,10 @@ window to close first; forced PID termination is only a timeout fallback.
 - There is no freeze, pause, or tick-rate override.
 - The HUD is never hidden.
 - While a host session is connected, physical keyboard/mouse input is suppressed
-  except ESC. ESC releases injected input, interrupts the current action, and
-  allows physical input while the pause screen is open; the lock re-arms when the
-  screen closes.
+  except ESC. Keys or buttons held before the session connects are released when
+  the lock arms, so they cannot keep acting. ESC releases injected input,
+  interrupts the current action, and allows physical input while the pause
+  screen is open; the lock re-arms when the screen closes.
 - `State.held` reports actual raw held keys/buttons; `State.input_locked` reports
   whether physical input is currently suppressed.
 - Block and inventory queries return client-side snapshots without NBT. Responses

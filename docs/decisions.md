@@ -145,6 +145,16 @@ during takeover are rejected.
 `State.held` reports the actual raw `keys`/`buttons` currently held, not merely
 what the last action requested.
 
+Arming the lock releases all vanilla key mappings once on the client thread, and
+re-arming after the ESC pause screen does the same. Without this, a key held
+before the session (for example, walking during the unconnected launch window)
+stays down: the lock blocks its release edge as well, so the player keeps moving
+after automation takes over.
+
+The lock is connection-scoped: it arms on session connect and disarms on
+disconnect. Before the first connection and after a disconnect the client is
+human-playable by design.
+
 ## D17. Queries are client-thread snapshots with request ids
 
 `QueryBlock` and `QueryInventory` are asynchronous request/response messages

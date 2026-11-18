@@ -19,6 +19,7 @@ public final class InputLock {
 
     private static volatile boolean armed;
     private static volatile boolean takeover;
+    private static volatile boolean releasePending;
     private static volatile Runnable takeoverHandler = () -> {
     };
 
@@ -36,12 +37,16 @@ public final class InputLock {
         PHYSICAL_BUTTONS.clear();
         takeover = false;
         armed = true;
+        // Keys/buttons held before the session connected are still down in
+        // vanilla's KeyMapping state. The client thread releases them once.
+        releasePending = true;
     }
 
     /** Disarm on disconnect; the client becomes human-controllable again. */
     public static void disarm() {
         armed = false;
         takeover = false;
+        releasePending = false;
         PHYSICAL_KEYS.clear();
         PHYSICAL_BUTTONS.clear();
     }
@@ -68,7 +73,21 @@ public final class InputLock {
     public static void onClientTick(boolean screenOpen) {
         if (armed && takeover && !screenOpen) {
             takeover = false;
+            releasePending = true;
         }
+    }
+
+    /**
+     * Returns true once after the lock arms or re-arms. The client thread must
+     * then release all vanilla key mappings so controls held before the lock
+     * became active do not stay stuck (their release edge is blocked too).
+     */
+    public static boolean consumeReleasePending() {
+        if (!releasePending) {
+            return false;
+        }
+        releasePending = false;
+        return true;
     }
 
     /**

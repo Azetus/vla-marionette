@@ -357,6 +357,10 @@ Opening a GUI does not interrupt raw input.
 ### 12.1 Physical input lock and ESC takeover
 
 - A connected session arms the physical input lock.
+- Arming the lock, and re-arming it after the ESC pause screen closes, releases
+  every vanilla key mapping on the client thread. Keys or buttons held before the
+  session therefore cannot keep acting after automation takes over; their release
+  edge would be blocked too.
 - Physical keyboard/mouse events are dropped while the lock is armed.
 - Injected events carry `InputInjection` and always pass.
 - Physical ESC is always allowed. From the world (no `Screen`), it:

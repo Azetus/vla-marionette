@@ -132,6 +132,8 @@ been replaced.
 - Keyboard and mouse events use vanilla dispatch, so an open `Screen` receives
   them naturally. GUI and world modes are not separate protocol modes.
 - A connected session arms `InputLock`; physical input is dropped while armed.
+  Arming (and re-arming after the pause screen closes) also releases all vanilla
+  key mappings, so keys held before the session cannot stay active.
   ESC from the world releases injected input, interrupts the action with
   `manual_takeover`, and allows physical input while the pause screen is open.
   Closing the pause screen re-arms the lock.

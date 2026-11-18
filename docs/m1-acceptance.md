@@ -141,14 +141,18 @@ Perform these once with the client focused:
 
 1. Connect and wait in world. Press physical W: the player should **not** move;
    `State.input_locked` is `true` and `State.held.keys` contains the W code.
-2. Inject a normal `W` chunk: the player moves; `State.held.keys` contains 87
+2. Hold physical W **before** the session connects, then connect while still
+   holding it: movement must stop when the lock arms. Releasing and pressing W
+   again must also produce no movement. This checks that pre-session held keys
+   are released rather than staying stuck.
+3. Inject a normal `W` chunk: the player moves; `State.held.keys` contains 87
    while the chunk is active.
-3. Press physical ESC: the pause screen opens; an active/scheduled chunk receives
+4. Press physical ESC: the pause screen opens; an active/scheduled chunk receives
    `interrupted/manual_takeover`; `State.input_locked` is `false`.
-4. In the pause screen, physical mouse/keyboard should work.
-5. Try to send another `ActionChunk` while paused: it is rejected with
+5. In the pause screen, physical mouse/keyboard should work.
+6. Try to send another `ActionChunk` while paused: it is rejected with
    `manual_takeover`.
-6. Return to the game: the lock re-arms; a new chunk works.
+7. Return to the game: the lock re-arms; a new chunk works.
 
 ## Stop behavior
 

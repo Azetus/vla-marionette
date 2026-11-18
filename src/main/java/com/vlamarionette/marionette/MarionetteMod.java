@@ -14,6 +14,7 @@ import com.vlamarionette.marionette.protocol.SessionInfo;
 import com.vlamarionette.marionette.query.QueryService;
 import com.vlamarionette.marionette.state.ClientClock;
 import com.vlamarionette.marionette.state.StateReporter;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -114,6 +115,11 @@ public final class MarionetteMod {
         }
 
         InputLock.onClientTick(mc.screen != null);
+        if (InputLock.consumeReleasePending()) {
+            // Arm/re-arm must not inherit physical controls pressed before the
+            // session (or during ESC takeover): releases are blocked too.
+            KeyMapping.releaseAll();
+        }
         long tick = ClientClock.tick();
         if (mc.level == null) {
             actionScheduler.release(tick, "no_level");

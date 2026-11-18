@@ -32,6 +32,7 @@ class InputLockTest {
     @Test
     void takeoverAllowsPhysicalAndRearmsWhenScreenCloses() {
         InputLock.arm();
+        InputLock.consumeReleasePending();
         InputLock.beginTakeover();
 
         assertTrue(InputLock.inManualTakeover());
@@ -40,9 +41,27 @@ class InputLockTest {
 
         InputLock.onClientTick(true);
         assertTrue(InputLock.inManualTakeover());
+        assertFalse(InputLock.consumeReleasePending());
         InputLock.onClientTick(false);
         assertFalse(InputLock.inManualTakeover());
         assertTrue(InputLock.shouldBlockPhysical(false));
+        assertTrue(InputLock.consumeReleasePending());
+    }
+
+    @Test
+    void armRequestsOnePhysicalRelease() {
+        InputLock.arm();
+
+        assertTrue(InputLock.consumeReleasePending());
+        assertFalse(InputLock.consumeReleasePending());
+    }
+
+    @Test
+    void disarmDropsPendingPhysicalRelease() {
+        InputLock.arm();
+        InputLock.disarm();
+
+        assertFalse(InputLock.consumeReleasePending());
     }
 
     @Test

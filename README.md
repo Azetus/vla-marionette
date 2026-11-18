@@ -9,15 +9,16 @@ model-side conversion constants.
 
 ## Status
 
-G1 is complete. The repository contains:
+G1 and G2 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
-- A client entry point that logs when the mod loads.
+- A client entry point and TCP transport.
+- SessionInfo handshake, per-connection session ids, Ping/Pong, and reconnect.
 - Mod metadata and an empty mixin configuration.
 
-Build and dev-client load have been verified. No transport, capture, state
-reporting, or control injection is implemented yet. Do not treat the presence of
-this scaffold as a working M1 loop.
+Build, unit tests, dev-client load, and a real handshake have been verified. No
+frame capture, state reporting, or control injection is implemented yet. Do not
+treat the current transport as a working M1 loop.
 
 ## Requirements
 
@@ -46,13 +47,23 @@ before building. The wrapper and dependencies are then resolved from that cache.
 
 The build output is `build/libs/vla-marionette.jar`.
 
+Run the pure unit tests with:
+
+```powershell
+mise exec -- .\gradlew.bat test --console=plain
+```
+
 ## Layout
 
 ```
-src/main/java/com/vlamarionette/marionette/   Java sources
+src/main/java/com/vlamarionette/marionette/
+  protocol/       wire framing and SessionInfo
+  net/            transport, connection lifecycle, inbound routing
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
+src/test/java/    pure unit tests (no game process)
 tools/build.ps1
+tools/mc.local.example.ps1
 mise.toml
 ```
 

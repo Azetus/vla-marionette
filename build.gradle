@@ -19,6 +19,20 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Gson and SLF4J are provided by the Minecraft/NeoForge classpath at runtime;
+    // make them explicit for the pure unit-test source set as well.
+    testImplementation 'com.google.code.gson:gson:2.13.2'
+    testImplementation 'org.slf4j:slf4j-api:2.0.17'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
 neoForge {
     version = project.neo_version
 

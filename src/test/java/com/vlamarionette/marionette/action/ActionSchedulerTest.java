@@ -67,6 +67,14 @@ class ActionSchedulerTest {
     }
 
     @Test
+    void allowsOneScheduledChunkWhileActive() {
+        assertTrue(scheduler.submit(chunk(1, 10, ActionFrame.EMPTY), 5).accepted());
+        scheduler.onPre(10);
+        assertTrue(scheduler.submit(chunk(2, 12, ActionFrame.EMPTY), 10).accepted());
+        assertEquals("busy", scheduler.submit(chunk(3, 14, ActionFrame.EMPTY), 10).reason());
+    }
+
+    @Test
     void releaseInterruptsActiveAndClearsInput() {
         assertTrue(scheduler.submit(chunk(1, 10, frame(Set.of(69))), 5).accepted());
         scheduler.onPre(10);

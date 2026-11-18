@@ -1,6 +1,7 @@
 package com.vlamarionette.marionette;
 
 import com.vlamarionette.marionette.action.ActionScheduler;
+import com.vlamarionette.marionette.action.InputLock;
 import com.vlamarionette.marionette.action.McInputInjector;
 import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureSpec;
@@ -39,6 +40,7 @@ public final class MarionetteMod {
     private final FrameMailbox frameMailbox;
     private final CaptureScheduler captureScheduler;
     private final StateReporter stateReporter;
+    private final McInputInjector inputInjector;
     private final ActionScheduler actionScheduler;
     private boolean focusPauseDisabled;
 
@@ -46,15 +48,18 @@ public final class MarionetteMod {
         BridgeConfig config = BridgeConfig.fromSystemProperties();
         transport = new Transport(config, SessionInfo::create);
 
-        McInputInjector inputInjector = new McInputInjector();
+        inputInjector = new McInputInjector();
         actionScheduler = new ActionScheduler(inputInjector, receipt -> {
             if (!transport.offerControl(receipt, null)) {
                 LOG.debug("[vla] could not enqueue action receipt (session not accepting)");
             }
         });
+        InputLock.setTakeoverHandler(
+                () -> actionScheduler.release(ClientClock.tick(), "manual_takeover"));
         transport.setInboundHandler(message -> InboundRouter.handle(transport, actionScheduler, message));
         transport.setOnConnect(session -> {
             LOG.info("[vla] bridge session {}", session);
+            InputLock.arm();
             Minecraft mc = Minecraft.getInstance();
             if (mc == null) {
                 // The first connection can win the race against Minecraft's construction.
@@ -65,6 +70,7 @@ public final class MarionetteMod {
         });
         transport.setOnDisconnect(() -> {
             LOG.info("[vla] bridge disconnected");
+            InputLock.disarm();
             Minecraft mc = Minecraft.getInstance();
             if (mc == null) {
                 actionScheduler.resetSession();
@@ -78,7 +84,7 @@ public final class MarionetteMod {
                 CaptureSpec.ENCODE_WIDTH, CaptureSpec.ENCODE_HEIGHT, CaptureSpec.JPEG_QUALITY);
         frameMailbox.start();
         captureScheduler = new CaptureScheduler(transport, frameMailbox);
-        stateReporter = new StateReporter(transport, captureScheduler);
+        stateReporter = new StateReporter(transport, captureScheduler, inputInjector);
 
         NeoForge.EVENT_BUS.addListener(ClientClock::onClientTick);
         NeoForge.EVENT_BUS.addListener(this::onClientTickPre);
@@ -104,6 +110,7 @@ public final class MarionetteMod {
             LOG.info("[vla] disabled focus-loss auto-pause");
         }
 
+        InputLock.onClientTick(mc.screen != null);
         long tick = ClientClock.tick();
         if (mc.level == null) {
             actionScheduler.release(tick, "no_level");

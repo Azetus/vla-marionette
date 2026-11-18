@@ -38,6 +38,7 @@ let afterFrameMeta = null;
 let lastState = null;
 let before = null;
 let after = null;
+let heldDuringAction = null;
 let actionSent = false;
 let startTick = 0;
 let endedTick = 0;
@@ -120,6 +121,12 @@ function handleMessage(header, body) {
         actionSent = true;
         console.log(`[m1] sent W frames=${frameCount} start=${startTick}`);
       }
+      if (actionSent && !heldDuringAction && header.tick >= startTick &&
+          (endedTick === 0 || header.tick < endedTick) &&
+          header.held?.keys?.includes(87)) {
+        heldDuringAction = { tick: header.tick, held: header.held, input_locked: header.input_locked };
+        console.log(`[m1] held during action tick=${header.tick} keys=${JSON.stringify(header.held.keys)} locked=${header.input_locked}`);
+      }
       if (actionSent && endedTick > 0 && header.tick >= endedTick &&
           header.on_ground === true && !after) {
         after = header;
@@ -201,6 +208,7 @@ function finish() {
     afterFrame: afterFrameMeta,
     observations,
     before,
+    heldDuringAction,
     after,
     startTick,
     endedTick,

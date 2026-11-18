@@ -6,7 +6,9 @@
   "client": [
     "GameRendererResizeMixin",
     "KeyboardHandlerAccessor",
+    "KeyboardHandlerMixin",
     "MouseHandlerAccessor",
+    "MouseHandlerMixin",
     "MinecraftFocusMixin"
   ],
   "injectors": {

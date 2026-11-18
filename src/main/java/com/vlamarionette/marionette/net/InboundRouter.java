@@ -5,6 +5,7 @@ import com.vlamarionette.marionette.action.ActionChunk;
 import com.vlamarionette.marionette.action.ActionParseException;
 import com.vlamarionette.marionette.action.ActionReceipt;
 import com.vlamarionette.marionette.action.ActionScheduler;
+import com.vlamarionette.marionette.action.InputLock;
 import com.vlamarionette.marionette.state.ClientClock;
 import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
@@ -54,6 +55,11 @@ public final class InboundRouter {
         } catch (RuntimeException e) {
             reject(transport, safeSeq(message), "bad_shape");
             LOG.warn("[vla] rejected ActionChunk: bad_shape", e);
+            return;
+        }
+
+        if (InputLock.inManualTakeover()) {
+            reject(transport, chunk.seq(), "manual_takeover");
             return;
         }
 

@@ -31,7 +31,9 @@ public final class ActionScheduler {
         if (acceptedSeq.contains(chunk.seq())) {
             return new SubmitResult(false, "duplicate");
         }
-        if (active != null || scheduled != null) {
+        // One active + at most one scheduled. A scheduled chunk is allowed while
+        // another chunk is active; only the second pending slot is busy.
+        if (scheduled != null) {
             return new SubmitResult(false, "busy");
         }
         if (chunk.startTick() <= currentTick) {

@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.vlamarionette.marionette.capture.CaptureStatus;
-import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class StateSnapshotTest {
@@ -21,8 +21,8 @@ class StateSnapshotTest {
                 0.5, 64.0, 0.5,
                 90.0, 10.0,
                 20.0F, true, true, 3,
-                "InventoryScreen", true, false,
-                List.of("forward"),
+                "InventoryScreen", true, true,
+                Set.of(87, 340), Set.of(0),
                 CaptureStatus.valid(7, 42, 1));
 
         JsonObject json = snapshot.toJson("s1");
@@ -42,8 +42,11 @@ class StateSnapshotTest {
         assertEquals(3, json.get("hotbar").getAsInt());
         assertEquals("InventoryScreen", json.get("screen").getAsString());
         assertTrue(json.get("screen_open").getAsBoolean());
-        assertFalse(json.get("input_locked").getAsBoolean());
-        assertEquals("forward", json.getAsJsonArray("held").get(0).getAsString());
+        assertTrue(json.get("input_locked").getAsBoolean());
+        JsonObject held = json.getAsJsonObject("held");
+        assertEquals(87, held.getAsJsonArray("keys").get(0).getAsInt());
+        assertEquals(340, held.getAsJsonArray("keys").get(1).getAsInt());
+        assertEquals(0, held.getAsJsonArray("buttons").get(0).getAsInt());
 
         JsonObject capture = json.getAsJsonObject("capture");
         assertTrue(capture.get("valid").getAsBoolean());
@@ -64,7 +67,7 @@ class StateSnapshotTest {
                 null, null,
                 null, null, null, null,
                 "TitleScreen", true, false,
-                List.of(),
+                Set.of(), Set.of(),
                 CaptureStatus.invalid(CaptureStatus.NO_LEVEL, 0, 0, 2));
 
         JsonObject json = snapshot.toJson("s2");
@@ -76,7 +79,9 @@ class StateSnapshotTest {
         assertTrue(json.get("health").isJsonNull());
         assertTrue(json.get("hotbar").isJsonNull());
         assertEquals("TitleScreen", json.get("screen").getAsString());
-        assertEquals(0, json.getAsJsonArray("held").size());
+        JsonObject held = json.getAsJsonObject("held");
+        assertEquals(0, held.getAsJsonArray("keys").size());
+        assertEquals(0, held.getAsJsonArray("buttons").size());
 
         JsonObject capture = json.getAsJsonObject("capture");
         assertFalse(capture.get("valid").getAsBoolean());

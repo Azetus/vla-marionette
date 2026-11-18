@@ -4,8 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.vlamarionette.marionette.capture.CaptureStatus;
-import java.util.List;
+import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Immutable state snapshot serialized as the {@code State} message.
@@ -32,11 +34,17 @@ public record StateSnapshot(
         String screen,
         boolean screenOpen,
         boolean inputLocked,
-        List<String> held,
+        Set<Integer> heldKeys,
+        Set<Integer> heldButtons,
         CaptureStatus capture) {
 
     public StateSnapshot {
-        held = held == null ? List.of() : List.copyOf(held);
+        heldKeys = heldKeys == null
+                ? Set.of()
+                : Collections.unmodifiableSet(new TreeSet<>(heldKeys));
+        heldButtons = heldButtons == null
+                ? Set.of()
+                : Collections.unmodifiableSet(new TreeSet<>(heldButtons));
         capture = Objects.requireNonNull(capture, "capture");
     }
 
@@ -63,10 +71,17 @@ public record StateSnapshot(
         json.addProperty("screen_open", screenOpen);
         json.addProperty("input_locked", inputLocked);
 
-        JsonArray heldJson = new JsonArray();
-        for (String control : held) {
-            heldJson.add(control);
+        JsonObject heldJson = new JsonObject();
+        JsonArray heldKeysJson = new JsonArray();
+        for (int key : heldKeys) {
+            heldKeysJson.add(key);
         }
+        heldJson.add("keys", heldKeysJson);
+        JsonArray heldButtonsJson = new JsonArray();
+        for (int button : heldButtons) {
+            heldButtonsJson.add(button);
+        }
+        heldJson.add("buttons", heldButtonsJson);
         json.add("held", heldJson);
 
         JsonObject captureJson = new JsonObject();

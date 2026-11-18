@@ -2,44 +2,45 @@
 
 A NeoForge client-side mod for Minecraft 26.1.2 (NeoForge 26.1.2.126).
 
-VLA-Marionette is a **device layer**: it exposes the game client to an external
-controller through frame capture, state reporting, tick-level control injection,
-and action receipts. It does not contain model prompts, action-text parsing, or
-model-side conversion constants.
+VLA-Marionette is a **device layer**. It exposes the game client to an external
+controller through frame capture, state reporting, tick-level raw input
+injection, and action receipts. It does not contain model prompts, action-text
+parsing, model vocabulary, or model-side conversion constants.
 
 ## Status
 
-G1 through G7 are complete. The repository contains:
+The M1 loop is implemented and has passed a three-run acceptance on an installed
+client:
 
-- Gradle/NeoForge build setup and wrapper.
-- A client entry point and TCP transport.
-- SessionInfo handshake, per-connection session ids, Ping/Pong, and reconnect.
-- Fixed-size window and render target, main-target capture, JPEG encoding, and
-  wall-clock 5 Hz sampling with HUD kept.
-- A periodic state report with world/position/health/screen and capture status,
-  including explicit no-world reasons.
-- Raw per-tick input frames (GLFW keyboard/mouse codes plus client-area mouse
-  pixels), action scheduling, and received/applied/ended receipts.
-- Graceful host-initiated shutdown and an isolated launch/acceptance harness.
-- Mod metadata and input/render mixins.
+- connection and `SessionInfo` handshake;
+- 854×480 JPEG observations at a 5 Hz target;
+- periodic state reports with actual held keys/buttons and input-lock status;
+- raw per-tick keyboard/mouse frames with received/applied/ended receipts;
+- a physical input lock with ESC manual takeover;
+- reconnect as a new session;
+- graceful host-initiated shutdown with integrated-server save.
 
-Build, unit tests, dev-client load, a real handshake, frame capture, state
-sampling, a real forward action, a GUI raw-input smoke, and a three-run
-acceptance on an installed superflat client have been verified. M1's formal
-three-run acceptance passed 3/3.
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Protocol](docs/protocol.md)
+- [M1 acceptance](docs/m1-acceptance.md)
+- [Decisions](docs/decisions.md)
 
 ## Requirements
 
 - [mise](https://mise.jdx.dev/) is used to pin the project JDK.
 - The Gradle wrapper in this repository.
-- A JDK 25 installation provided by `mise install`.
+- A JDK 25 installation provided by `mise install`; `mise.toml` pins Java 25.0.5.
+- A Minecraft/NeoForge client installation for live testing.
+- A superflat test world for the M1 acceptance; the client must run in a window
+  that the mod can size to 640×360.
 
-`mise.toml` currently pins Java 25.0.5.
-
-## Build
+## Build and test
 
 ```powershell
 mise install
+mise exec -- .\gradlew.bat test --console=plain
 mise exec -- .\gradlew.bat build --console=plain
 ```
 
@@ -47,26 +48,65 @@ On Unix-like shells:
 
 ```sh
 mise install
+mise exec -- ./gradlew test --console=plain
 mise exec -- ./gradlew build --console=plain
 ```
 
-If your Gradle cache is not the default `~/.gradle`, set `GRADLE_USER_HOME`
-before building. The wrapper and dependencies are then resolved from that cache.
+The build output is `build/libs/vla-marionette.jar`. If the Gradle cache is not
+the default `~/.gradle`, set `GRADLE_USER_HOME` before building.
 
-The build output is `build/libs/vla-marionette.jar`.
+## Live testing
 
-Run the pure unit tests with:
+The launcher scripts use local machine paths from an ignored configuration file.
+Copy `tools/mc.local.example.ps1` to `tools/mc.local.ps1` and fill in:
+
+- the installed version directory;
+- the test world name;
+- the bridge port;
+- optionally a world source directory for an isolated copy.
+
+The example file contains placeholders only.
+
+Typical commands:
 
 ```powershell
-mise exec -- .\gradlew.bat test --console=plain
+# Deploy the built jar to an installation (old jar is kept as .jar.disabled).
+.\tools\deploy.ps1 -GameDir '<version-dir>'
+
+# Launch the installed client with a test world.
+.\tools\launch-mc.ps1 -Installed -World vla-m1
+
+# Run the acceptance host once, or three times with automatic shutdown.
+.\tools\m1-run.ps1 -Installed -Runs 3 -World vla-m1
 ```
+
+`launch-mc.ps1` can also create an isolated `runs/mc-*/game` copy without
+touching the installed saves. `stop-mc.ps1` validates the process id and asks the
+window to close first; forced PID termination is only a timeout fallback.
+
+## Limitations
+
+- There is no freeze, pause, or tick-rate override.
+- The HUD is never hidden.
+- While a host session is connected, physical keyboard/mouse input is suppressed
+  except ESC. ESC releases injected input, interrupts the current action, and
+  allows physical input while the pause screen is open; the lock re-arms when the
+  screen closes.
+- `State.held` reports actual raw held keys/buttons; `State.input_locked` reports
+  whether physical input is currently suppressed.
+- Background operation has not been fully verified: minimizing lowers vanilla
+  rendering to 10 FPS, and continuous mining has an independent mouse-grab gate.
+- The protocol does not include block/inventory queries or multi-chunk
+  concurrency.
+- A single client tick can contain at most one press/release edge per key or
+  button; multiple edges inside one tick are not represented.
 
 ## Layout
 
 ```
 src/main/java/com/vlamarionette/marionette/
   protocol/       wire framing and SessionInfo
-  net/            transport, connection lifecycle, inbound routing
+  net/            transport, connection lifecycle, inbound routing, shutdown
   capture/        frame grabber, JPEG encoder, latest-frame mailbox, scheduler
   state/          client tick clock and state report
   action/         raw frames, scheduler, receipts, vanilla input injection
@@ -75,19 +115,8 @@ src/main/java/com/vlamarionette/marionette/
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
 src/test/java/    pure unit tests (no game process)
-tools/build.ps1
-tools/g3-capture-check.mjs
-tools/g4-state-check.mjs
-tools/g5-action-check.mjs
-tools/g5-gui-check.mjs
-tools/mc-argv.mjs
-tools/deploy.ps1
-tools/launch-mc.ps1
-tools/stop-mc.ps1
-tools/m1-acceptance.mjs
-tools/m1-run.ps1
-tools/mc.local.example.ps1
-mise.toml
+tools/            build, launcher, acceptance, and diagnostic scripts
+docs/             public protocol and acceptance documentation
 ```
 
 ## License

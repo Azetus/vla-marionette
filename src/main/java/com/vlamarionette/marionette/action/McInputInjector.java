@@ -107,6 +107,14 @@ public final class McInputInjector implements InputSink {
         InputInjection.run(mc.mouseHandler::handleAccumulatedMovement);
     }
 
+    public Set<Integer> heldKeys() {
+        return Set.copyOf(heldKeys);
+    }
+
+    public Set<Integer> heldButtons() {
+        return Set.copyOf(heldButtons);
+    }
+
     @Override
     public void releaseAll() {
         for (int key : new HashSet<>(heldKeys)) {

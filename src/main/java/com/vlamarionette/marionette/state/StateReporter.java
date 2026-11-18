@@ -1,9 +1,12 @@
 package com.vlamarionette.marionette.state;
 
+import com.vlamarionette.marionette.action.InputLock;
+import com.vlamarionette.marionette.action.McInputInjector;
 import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureStatus;
 import com.vlamarionette.marionette.net.Transport;
-import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
@@ -24,12 +27,15 @@ public final class StateReporter {
 
     private final Transport transport;
     private final CaptureScheduler captureScheduler;
+    private final McInputInjector inputInjector;
 
     private long lastSentMs;
 
-    public StateReporter(Transport transport, CaptureScheduler captureScheduler) {
+    public StateReporter(Transport transport, CaptureScheduler captureScheduler,
+            McInputInjector inputInjector) {
         this.transport = transport;
         this.captureScheduler = captureScheduler;
+        this.inputInjector = inputInjector;
     }
 
     public void onClientTick(ClientTickEvent.Post event) {
@@ -83,6 +89,11 @@ public final class StateReporter {
         capture = new CaptureStatus(capture.valid(), capture.reason(),
                 capture.lastObsId(), capture.lastFrameTick(), captureScheduler.encodeFailures());
 
+        Set<Integer> heldKeys = new TreeSet<>(inputInjector.heldKeys());
+        heldKeys.addAll(InputLock.physicalKeys());
+        Set<Integer> heldButtons = new TreeSet<>(inputInjector.heldButtons());
+        heldButtons.addAll(InputLock.physicalButtons());
+
         StateSnapshot snapshot = new StateSnapshot(
                 ClientClock.tick(),
                 gameTime,
@@ -92,8 +103,9 @@ public final class StateReporter {
                 health, alive, onGround, hotbar,
                 mc.screen != null ? mc.screen.getClass().getSimpleName() : null,
                 mc.screen != null,
-                false,
-                List.of(),
+                InputLock.isLocked(),
+                heldKeys,
+                heldButtons,
                 capture);
 
         transport.offerControl(snapshot.toJson(sessionId), null);

@@ -7,5 +7,7 @@ $env:VLA_MC_WORLD       = 'vla-m1'
 $env:VLA_MC_PORT        = '25580'
 
 # Optional:
-# $env:VLA_MC_JAVA     = '<path-to-java.exe>'
-# $env:VLA_MC_GAME_DIR  = '<optional-isolated-game-dir>'
+# $env:VLA_MC_JAVA          = '<path-to-java.exe>'
+# $env:VLA_MC_WORLD_SOURCE  = '<path-to-a-save-directory>'
+# $env:VLA_MC_ASSETS_DIR    = '<path-to-assets>'
+# $env:VLA_MC_LIBRARIES_DIR = '<path-to-libraries>'

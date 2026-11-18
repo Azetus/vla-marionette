@@ -9,7 +9,7 @@ model-side conversion constants.
 
 ## Status
 
-G1 through G5 are complete. The repository contains:
+G1 through G6 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
 - A client entry point and TCP transport.
@@ -20,11 +20,13 @@ G1 through G5 are complete. The repository contains:
   including explicit no-world reasons.
 - Raw per-tick input frames (GLFW keyboard/mouse codes plus client-area mouse
   pixels), action scheduling, and received/applied/ended receipts.
+- Graceful host-initiated shutdown and an isolated launch/acceptance harness.
 - Mod metadata and input/render mixins.
 
 Build, unit tests, dev-client load, a real handshake, frame capture, state
-sampling, a real forward action, and a GUI raw-input smoke have been verified.
-The M1 acceptance harness and three-run acceptance are not implemented yet.
+sampling, a real forward action, a GUI raw-input smoke, and a three-run
+acceptance on an isolated superflat client have been verified. The formal G7
+installed-client acceptance remains pending.
 
 ## Requirements
 
@@ -78,6 +80,12 @@ tools/g3-capture-check.mjs
 tools/g4-state-check.mjs
 tools/g5-action-check.mjs
 tools/g5-gui-check.mjs
+tools/mc-argv.mjs
+tools/deploy.ps1
+tools/launch-mc.ps1
+tools/stop-mc.ps1
+tools/m1-acceptance.mjs
+tools/m1-run.ps1
 tools/mc.local.example.ps1
 mise.toml
 ```

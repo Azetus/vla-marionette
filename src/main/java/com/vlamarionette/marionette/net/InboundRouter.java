@@ -30,6 +30,7 @@ public final class InboundRouter {
             case "Pong" -> LOG.debug("[vla] pong nonce={}",
                     message.has("nonce") ? message.get("nonce").getAsString() : "");
             case "ActionChunk" -> handleAction(transport, scheduler, message);
+            case "Shutdown" -> ShutdownHandler.handle(transport, message);
             case "Release" -> {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc == null) {

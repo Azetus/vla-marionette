@@ -60,6 +60,7 @@ public final class SessionInfo {
         capabilities.add("observation");
         capabilities.add("state");
         capabilities.add("raw_input");
+        capabilities.add("shutdown");
         info.add("capabilities", capabilities);
 
         JsonObject limits = new JsonObject();

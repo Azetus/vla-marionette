@@ -37,7 +37,6 @@ class TransportTest {
                     socket.setSoTimeout(5000);
                     Framing.Frame handshake = Framing.read(socket.getInputStream());
                     assertEquals("SessionInfo", handshake.type());
-                    assertEquals(1, handshake.header().get("protocol_version").getAsInt());
                     firstSession = handshake.header().get("session_id").getAsString();
                     assertEquals(firstSession, transport.sessionId());
                     assertTrue(transport.connected());

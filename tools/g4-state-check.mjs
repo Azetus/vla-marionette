@@ -63,7 +63,7 @@ const server = net.createServer((socket) => {
 
       if (header.type === "SessionInfo") {
         session = header;
-        console.log(`[g4] SessionInfo protocol=${header.protocol_version} capabilities=${JSON.stringify(header.capabilities)}`);
+        console.log(`[g4] SessionInfo capabilities=${JSON.stringify(header.capabilities)}`);
         continue;
       }
       if (header.type !== "State") continue;

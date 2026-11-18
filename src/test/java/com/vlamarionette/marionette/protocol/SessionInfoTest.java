@@ -1,7 +1,7 @@
 package com.vlamarionette.marionette.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import com.google.gson.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -13,7 +13,6 @@ class SessionInfoTest {
         JsonObject info = SessionInfo.create("session-1");
 
         assertEquals("SessionInfo", info.get("type").getAsString());
-        assertEquals(1, info.get("protocol_version").getAsInt());
         assertEquals("session-1", info.get("session_id").getAsString());
         assertEquals(50, info.get("tick_ms").getAsInt());
 
@@ -30,14 +29,14 @@ class SessionInfoTest {
     }
 
     @Test
-    void onlyAdvertisesImplementedG2Capabilities() {
+    void advertisesOnlyImplementedCapabilities() {
         JsonObject info = SessionInfo.create("session-2");
 
         assertEquals(3, info.getAsJsonArray("capabilities").size());
         assertEquals("ping", info.getAsJsonArray("capabilities").get(0).getAsString());
         assertEquals("observation", info.getAsJsonArray("capabilities").get(1).getAsString());
         assertEquals("state", info.getAsJsonArray("capabilities").get(2).getAsString());
-        assertTrue(info.getAsJsonObject("controls").entrySet().isEmpty());
-        assertEquals(20, info.getAsJsonObject("limits").get("max_chunk_ticks").getAsInt());
+        assertFalse(info.has("controls"));
+        assertEquals(20, info.getAsJsonObject("limits").get("max_action_frames").getAsInt());
     }
 }

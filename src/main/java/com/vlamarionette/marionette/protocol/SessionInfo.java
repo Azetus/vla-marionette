@@ -7,14 +7,13 @@ import java.util.Objects;
 /**
  * Builds the handshake message for one connection.
  *
- * <p>G2 only implements transport/session and Ping/Pong, so capabilities and
- * controls list only what is actually available. Later milestones add
- * observation, state, and action capabilities together with their
- * implementations.
+ * <p>Capabilities list only what is actually available. The handshake has no
+ * global version field; a host must use the advertised capabilities and field
+ * shapes as the contract. Later milestones add raw input together with its
+ * implementation.
  */
 public final class SessionInfo {
 
-    public static final int PROTOCOL_VERSION = 1;
     public static final String MC_VERSION = "26.1.2";
     public static final String MOD_VERSION = "0.1.0";
     public static final int TICK_MS = 50;
@@ -34,7 +33,6 @@ public final class SessionInfo {
 
         JsonObject info = new JsonObject();
         info.addProperty("type", "SessionInfo");
-        info.addProperty("protocol_version", PROTOCOL_VERSION);
         info.addProperty("session_id", sessionId);
         info.addProperty("mc_version", MC_VERSION);
         info.addProperty("mod_version", MOD_VERSION);
@@ -63,10 +61,8 @@ public final class SessionInfo {
         capabilities.add("state");
         info.add("capabilities", capabilities);
 
-        info.add("controls", new JsonObject());
-
         JsonObject limits = new JsonObject();
-        limits.addProperty("max_chunk_ticks", 20);
+        limits.addProperty("max_action_frames", 20);
         info.add("limits", limits);
 
         return info;

@@ -84,7 +84,7 @@ const server = net.createServer((socket) => {
 
       if (header.type === "SessionInfo") {
         session = header;
-        console.log(`[g3] SessionInfo protocol=${header.protocol_version} image=${header.image.width}x${header.image.height} ${header.image.pixel_format} capabilities=${JSON.stringify(header.capabilities)}`);
+        console.log(`[g3] SessionInfo image=${header.image.width}x${header.image.height} ${header.image.pixel_format} capabilities=${JSON.stringify(header.capabilities)}`);
         continue;
       }
       if (header.type !== "Observation") continue;

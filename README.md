@@ -9,7 +9,7 @@ model-side conversion constants.
 
 ## Status
 
-G1 through G6 are complete. The repository contains:
+G1 through G7 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
 - A client entry point and TCP transport.
@@ -25,8 +25,8 @@ G1 through G6 are complete. The repository contains:
 
 Build, unit tests, dev-client load, a real handshake, frame capture, state
 sampling, a real forward action, a GUI raw-input smoke, and a three-run
-acceptance on an isolated superflat client have been verified. The formal G7
-installed-client acceptance remains pending.
+acceptance on an installed superflat client have been verified. M1's formal
+three-run acceptance passed 3/3.
 
 ## Requirements
 

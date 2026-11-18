@@ -4,7 +4,8 @@ param(
     [string]$Jar = "",
     [int]$Port = 0,
     [string]$WorldSource = "",
-    [switch]$NoDeploy
+    [switch]$NoDeploy,
+    [switch]$Installed
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,10 +19,10 @@ if (-not $env:VLA_MC_VERSION_DIR) {
 $versionDir = (Resolve-Path $env:VLA_MC_VERSION_DIR).Path
 if (-not $World) { $World = if ($env:VLA_MC_WORLD) { $env:VLA_MC_WORLD } else { 'vla-m1' } }
 if ($Port -eq 0) { $Port = if ($env:VLA_MC_PORT) { [int]$env:VLA_MC_PORT } else { 25580 } }
-if (-not $WorldSource) {
+if (-not $Installed -and -not $WorldSource) {
     $WorldSource = if ($env:VLA_MC_WORLD_SOURCE) { $env:VLA_MC_WORLD_SOURCE } else { Join-Path $versionDir "saves\$World" }
 }
-if (-not (Test-Path $WorldSource)) {
+if (-not $Installed -and -not (Test-Path $WorldSource)) {
     throw "world source not found: $WorldSource; create a new '$World' world or set VLA_MC_WORLD_SOURCE"
 }
 
@@ -36,9 +37,13 @@ if ($javaVersion -notmatch 'version "25\.') {
     throw "Java 25 required, got:`n$javaVersion"
 }
 
-if (-not $Jar) { $Jar = Join-Path $workspace 'build\libs\vla-marionette.jar' }
-if (-not (Test-Path $Jar)) { throw "mod jar not found: $Jar; run tools/build.ps1 first" }
-$Jar = (Resolve-Path $Jar).Path
+if (-not $Installed) {
+    if (-not $Jar) { $Jar = Join-Path $workspace 'build\libs\vla-marionette.jar' }
+    if (-not (Test-Path $Jar)) { throw "mod jar not found: $Jar; run tools/build.ps1 first" }
+    $Jar = (Resolve-Path $Jar).Path
+} elseif (-not (Test-Path (Join-Path $versionDir 'mods\vla-marionette.jar'))) {
+    throw "installed mod jar not found: $(Join-Path $versionDir 'mods\vla-marionette.jar'); run tools/deploy.ps1 first"
+}
 
 $activeFile = Join-Path $workspace 'runs\active.json'
 if (Test-Path $activeFile) {
@@ -60,29 +65,37 @@ if (-not $RunDir) {
 }
 New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
 $RunDir = (Resolve-Path $RunDir).Path
-$gameDir = Join-Path $RunDir 'game'
-New-Item -ItemType Directory -Force -Path $gameDir,(Join-Path $gameDir 'mods'),(Join-Path $gameDir 'saves'),(Join-Path $gameDir 'logs') | Out-Null
 
-$optionsFile = Join-Path $gameDir 'options.txt'
-if (-not (Test-Path $optionsFile)) {
-    @'
+if ($Installed) {
+    $gameDir = $versionDir
+    if (-not (Test-Path (Join-Path $gameDir "saves\$World"))) {
+        throw "installed world not found: $(Join-Path $gameDir "saves\$World")"
+    }
+} else {
+    $gameDir = Join-Path $RunDir 'game'
+    New-Item -ItemType Directory -Force -Path $gameDir,(Join-Path $gameDir 'mods'),(Join-Path $gameDir 'saves'),(Join-Path $gameDir 'logs') | Out-Null
+
+    $optionsFile = Join-Path $gameDir 'options.txt'
+    if (-not (Test-Path $optionsFile)) {
+        @'
 pauseOnLostFocus:false
 inactivityFpsLimit:minimized
 onboardAccessibility:false
 maxFps:120
 enableVsync:true
 '@ | Set-Content $optionsFile -Encoding utf8
-}
+    }
 
-$saveTarget = Join-Path $gameDir "saves\$World"
-if (Test-Path $saveTarget) { Remove-Item $saveTarget -Recurse -Force }
-Copy-Item $WorldSource $saveTarget -Recurse -Force
-Remove-Item (Join-Path $saveTarget 'session.lock') -Force -ErrorAction SilentlyContinue
+    $saveTarget = Join-Path $gameDir "saves\$World"
+    if (Test-Path $saveTarget) { Remove-Item $saveTarget -Recurse -Force }
+    Copy-Item $WorldSource $saveTarget -Recurse -Force
+    Remove-Item (Join-Path $saveTarget 'session.lock') -Force -ErrorAction SilentlyContinue
 
-if (-not $NoDeploy) {
-    $modsDir = Join-Path $gameDir 'mods'
-    Get-ChildItem $modsDir -Filter 'vla-marionette.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force
-    Copy-Item $Jar (Join-Path $modsDir 'vla-marionette.jar') -Force
+    if (-not $NoDeploy) {
+        $modsDir = Join-Path $gameDir 'mods'
+        Get-ChildItem $modsDir -Filter 'vla-marionette.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+        Copy-Item $Jar (Join-Path $modsDir 'vla-marionette.jar') -Force
+    }
 }
 
 $runId = "vla-$([guid]::NewGuid().ToString('N').Substring(0,12))"

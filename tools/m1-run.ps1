@@ -4,7 +4,8 @@ param(
     [string]$World = "",
     [int]$Port = 0,
     [string]$Jar = "",
-    [double]$MaxDy = 0.20
+    [double]$MaxDy = 0.20,
+    [switch]$Installed
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,6 +25,7 @@ $launchArgs = @{
 if ($World) { $launchArgs.World = $World }
 if ($Port) { $launchArgs.Port = $Port }
 if ($Jar) { $launchArgs.Jar = $Jar }
+if ($Installed) { $launchArgs.Installed = $true }
 
 & (Join-Path $PSScriptRoot 'launch-mc.ps1') @launchArgs
 if ($LASTEXITCODE -ne 0) { throw 'launch failed' }

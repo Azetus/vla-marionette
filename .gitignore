@@ -14,3 +14,4 @@ logs/
 
 # Machine-local configuration
 local.properties
+/tools/mc.local.ps1

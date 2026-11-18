@@ -1,0 +1,61 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+// Minecraft 26.1.2 requires Java 25.
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+// ModDevGradle injects maven.neoforged.net, which is not reachable from this
+// environment. Replace the injected repositories with reachable equivalents.
+// This must run before the repositories block below.
+repositories.clear()
+
+repositories {
+    maven { url = uri('https://libraries.minecraft.net/') }
+    maven { url = uri('https://neoforged.forgecdn.net/releases') }
+    maven { url = uri('https://neoforged.forgecdn.net/mojang-meta') }
+    maven { url = uri('https://maven.aliyun.com/repository/public') }
+    mavenCentral()
+}
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            gameDirectory = project.file('run/client')
+            programArguments = ['--username', 'VLADev']
+        }
+    }
+
+    mods {
+        vla_marionette {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+// NFRT defaults its helper task to a Java 21 toolchain. Run it on the project
+// JDK (25) so the mise-managed toolchain is sufficient for a dev client.
+def javaToolchains = extensions.getByType(org.gradle.jvm.toolchain.JavaToolchainService)
+tasks.named('downloadAssets') {
+    javaExecutable = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }.get().executablePath.asFile.absolutePath
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes([
+            'Implementation-Title'  : project.mod_name,
+            'Implementation-Version': project.mod_version,
+        ])
+    }
+}

@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        // Aliyun mirrors first for Gradle plugin dependencies.
+        maven { url = uri('https://maven.aliyun.com/repository/public') }
+        maven { url = uri('https://maven.aliyun.com/repository/gradle-plugin') }
+        // NeoForge CDN: directly reachable on this machine.
+        maven { url = uri('https://neoforged.forgecdn.net/releases') }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'vla-marionette'

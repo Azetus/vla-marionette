@@ -1,0 +1,16 @@
+# Local plans/records
+/plan
+
+# Gradle
+.gradle/
+build/
+
+# Runtime and test artifacts
+run/
+runs/
+.cache/
+logs/
+*.log
+
+# Machine-local configuration
+local.properties

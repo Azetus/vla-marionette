@@ -1,0 +1,26 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "vla_marionette"
+version = "0.1.0"
+displayName = "VLA-Marionette"
+description = '''Client-side device layer for external VLA control: frame capture, state reporting, tick-level control injection, and action receipts.'''
+
+[[mixins]]
+config = "vla_marionette.mixins.json"
+
+[[dependencies.vla_marionette]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vla_marionette]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.1.2]"
+ordering = "NONE"
+side = "BOTH"

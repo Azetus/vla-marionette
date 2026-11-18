@@ -32,12 +32,15 @@ class SessionInfoTest {
     void advertisesOnlyImplementedCapabilities() {
         JsonObject info = SessionInfo.create("session-2");
 
-        assertEquals(5, info.getAsJsonArray("capabilities").size());
+        assertEquals(8, info.getAsJsonArray("capabilities").size());
         assertEquals("ping", info.getAsJsonArray("capabilities").get(0).getAsString());
         assertEquals("observation", info.getAsJsonArray("capabilities").get(1).getAsString());
         assertEquals("state", info.getAsJsonArray("capabilities").get(2).getAsString());
         assertEquals("raw_input", info.getAsJsonArray("capabilities").get(3).getAsString());
         assertEquals("shutdown", info.getAsJsonArray("capabilities").get(4).getAsString());
+        assertEquals("query_block", info.getAsJsonArray("capabilities").get(5).getAsString());
+        assertEquals("query_inventory", info.getAsJsonArray("capabilities").get(6).getAsString());
+        assertEquals("chat", info.getAsJsonArray("capabilities").get(7).getAsString());
         assertFalse(info.has("controls"));
         assertEquals(20, info.getAsJsonObject("limits").get("max_action_frames").getAsInt());
     }

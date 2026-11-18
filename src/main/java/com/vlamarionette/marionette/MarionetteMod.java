@@ -11,6 +11,7 @@ import com.vlamarionette.marionette.net.BridgeConfig;
 import com.vlamarionette.marionette.net.InboundRouter;
 import com.vlamarionette.marionette.net.Transport;
 import com.vlamarionette.marionette.protocol.SessionInfo;
+import com.vlamarionette.marionette.query.QueryService;
 import com.vlamarionette.marionette.state.ClientClock;
 import com.vlamarionette.marionette.state.StateReporter;
 import net.minecraft.client.Minecraft;
@@ -56,7 +57,9 @@ public final class MarionetteMod {
         });
         InputLock.setTakeoverHandler(
                 () -> actionScheduler.release(ClientClock.tick(), "manual_takeover"));
-        transport.setInboundHandler(message -> InboundRouter.handle(transport, actionScheduler, message));
+        QueryService queryService = new QueryService(transport);
+        transport.setInboundHandler(message ->
+                InboundRouter.handle(transport, actionScheduler, queryService, message));
         transport.setOnConnect(session -> {
             LOG.info("[vla] bridge session {}", session);
             InputLock.arm();

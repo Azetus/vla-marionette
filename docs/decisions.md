@@ -145,12 +145,47 @@ during takeover are rejected.
 `State.held` reports the actual raw `keys`/`buttons` currently held, not merely
 what the last action requested.
 
+## D17. Queries are client-thread snapshots with request ids
+
+`QueryBlock` and `QueryInventory` are asynchronous request/response messages
+keyed by `request_id`. Shape validation runs on the network thread; the actual
+reads run on the client thread and responses go through the control queue.
+
+Reason: reading `level`/`player` from the network thread would race with the
+client tick. The response carries the session of the request, so a delayed reply
+cannot enter a newer connection.
+
+Consequences: responses are not ordered relative to each other or to `State`;
+the host correlates by `request_id`. At most 32 requests may be outstanding.
+A query returns client-side state, not an authoritative server snapshot, and no
+NBT. Crosshair queries read the vanilla per-frame pick result and may be one
+frame stale.
+
+## D18. Unified chat entry; `ok` means dispatched
+
+One `Chat` message carries a single line of text. A leading `/` dispatches
+`ClientPacketListener.sendCommand`; otherwise the line goes through `sendChat`.
+This mirrors vanilla `ChatScreen`. There is no command whitelist or denylist and
+no command-name parsing.
+
+Reason: a command is a chat line with a leading slash at the device layer. A
+whitelist would be a second, version-coupled source of command truth with no
+real security benefit (whitelisted commands such as `give` can still change the
+world arbitrarily). Policy belongs to the host.
+
+Consequences: `stop`, `kick`, `ban` and similar commands reach the server
+directly; a normal close must use `Shutdown(save=true)`. `ChatAck.ok` only means
+the line was handed to the vanilla path; it does not prove execution. Plain chat
+is public in multiplayer and subject to chat signing, filters and rate limits.
+The mod does not open the chat screen and does not fold internal whitespace.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:
 
-- no block/inventory query protocol;
 - no multi-chunk concurrency;
 - no sub-tick event stream; one held state per tick is intentional;
 - background/minimized capture and continuous mining are not fully verified;
-- no freeze is intentional and permanent for v1.
+- no freeze is intentional and permanent for v1;
+- query/chat responses are best effort during shutdown;
+- command dispatch is not sandboxed; the host is responsible for what it sends.

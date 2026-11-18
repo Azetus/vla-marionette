@@ -12,6 +12,7 @@ import com.vlamarionette.marionette.action.ActionScheduler;
 import com.vlamarionette.marionette.action.InputSink;
 import com.vlamarionette.marionette.protocol.Framing;
 import com.vlamarionette.marionette.protocol.SessionInfo;
+import com.vlamarionette.marionette.query.QueryService;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -45,7 +46,9 @@ class TransportTest {
                 }
             }, receipt -> {
             });
-            transport.setInboundHandler(message -> InboundRouter.handle(transport, scheduler, message));
+            QueryService queries = new QueryService(transport);
+            transport.setInboundHandler(message ->
+                    InboundRouter.handle(transport, scheduler, queries, message));
             transport.start();
 
             try {
@@ -91,6 +94,17 @@ class TransportTest {
                     assertEquals("Observation", sent.type());
                     assertEquals(secondSession, sent.header().get("session_id").getAsString());
                     assertArrayEquals(new byte[]{1, 2, 3}, sent.body());
+
+                    JsonObject staleControl = new JsonObject();
+                    staleControl.addProperty("type", "QueryBlockResult");
+                    assertFalse(transport.offerControlFor(firstSession, staleControl, null));
+
+                    JsonObject freshControl = new JsonObject();
+                    freshControl.addProperty("type", "QueryInventoryResult");
+                    assertTrue(transport.offerControlFor(secondSession, freshControl, null));
+                    Framing.Frame control = Framing.read(socket.getInputStream());
+                    assertEquals("QueryInventoryResult", control.type());
+                    assertEquals(secondSession, control.header().get("session_id").getAsString());
                 }
             } finally {
                 transport.stop();

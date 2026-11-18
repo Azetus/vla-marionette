@@ -15,6 +15,8 @@ Transport (connect/read/write daemon threads)
    │
    ├── InboundRouter ──► ActionScheduler ──► InputSink
    │                                      └─► McInputInjector
+   │                └──► QueryService ──► client-thread readers
+   │                                     └─► Chat dispatch
    │
    ├── CaptureScheduler ──► FrameMailbox ──► JPEG encoder
    │
@@ -75,6 +77,17 @@ Minecraft main/client thread:
   `KeyboardHandler`/`MouseHandler`; maintains a virtual mouse position and
   flushes mouse movement at tick post.
 
+### `query`
+
+- `QueryRequests` / `ChatRequest`: network-thread shape and text validation,
+  normalization, and command-vs-chat classification.
+- `QueryService`: outstanding-request limit, client-thread hop, and
+  session-scoped response delivery.
+- `McQueryReader`: block state/properties/block-entity, crosshair target, and
+  inventory reads; dispatch of `sendCommand`/`sendChat`.
+- `QueryResponses`: response builders for `QueryBlockResult`,
+  `QueryInventoryResult`, and `ChatAck`.
+
 ### `mixin`
 
 - `GameRendererResizeMixin`: forces the render target to 640×360.
@@ -89,12 +102,14 @@ Minecraft main/client thread:
 
 | Thread | Allowed work |
 |---|---|
-| Client/render main thread | tick clock, action scheduling, input writes, frame readback, state snapshot, window changes |
-| Network read/write threads | framing, JSON parse/validate, enqueue, received/rejected receipts; no Minecraft state |
+| Client/render main thread | tick clock, action scheduling, input writes, frame readback, state snapshot, window changes, query reads, chat dispatch |
+| Network read/write threads | framing, JSON parse/validate, enqueue, received/rejected receipts, query/chat shape checks and response enqueue; no Minecraft state |
 | JPEG encoder thread | RGB resize and JPEG encoding; no Minecraft state or socket |
 
 The render/main thread never waits for the socket. Minecraft operations triggered
-from the network side go through `Minecraft.execute(...)`.
+from the network side go through `Minecraft.execute(...)`. Query/chat responses
+carry the session of the request and are dropped if the connection has since
+been replaced.
 
 ## Session lifecycle
 
@@ -104,7 +119,8 @@ from the network side go through `Minecraft.execute(...)`.
    session.
 4. Disconnect clears outbound queues, interrupts active/scheduled input, and
    releases held keys/buttons on the main thread.
-5. Reconnect creates a fresh session; old frames/receipts/actions are rejected.
+5. Reconnect creates a fresh session; old frames/receipts/actions are rejected,
+   and delayed query/chat responses are dropped by session id.
 
 ## Input model
 
@@ -130,4 +146,7 @@ from the network side go through `Minecraft.execute(...)`.
 - Render target/window 640×360; JPEG 854×480; quality 0.9.
 - 5 Hz capture target; 10 Hz state target; 20 TPS logical client tick target.
 - One active + at most one scheduled action.
+- Query/chat responses are keyed by `request_id`, not ordered, and never leak
+  into a newer session.
+- `ChatAck.ok` means dispatched, not executed; chat is not filtered by the mod.
 - No model vocabulary or model-side constants in the mod.

@@ -16,6 +16,8 @@ client:
 - 854×480 JPEG observations at a 5 Hz target;
 - periodic state reports with actual held keys/buttons and input-lock status;
 - raw per-tick keyboard/mouse frames with received/applied/ended receipts;
+- block and inventory queries with per-request asynchronous replies;
+- a unified chat/command entry (`Chat`), with no command filtering;
 - a physical input lock with ESC manual takeover;
 - reconnect as a new session;
 - graceful host-initiated shutdown with integrated-server save.
@@ -25,6 +27,7 @@ client:
 - [Architecture](docs/architecture.md)
 - [Protocol](docs/protocol.md)
 - [M1 acceptance](docs/m1-acceptance.md)
+- [Query and chat acceptance](docs/query-acceptance.md)
 - [Decisions](docs/decisions.md)
 
 ## Requirements
@@ -94,10 +97,14 @@ window to close first; forced PID termination is only a timeout fallback.
   screen closes.
 - `State.held` reports actual raw held keys/buttons; `State.input_locked` reports
   whether physical input is currently suppressed.
+- Block and inventory queries return client-side snapshots without NBT. Responses
+  are correlated by `request_id` and may arrive out of order.
+- `Chat` sends one line; a leading `/` uses the vanilla command path. There is no
+  command filtering, and `ChatAck.ok` only means the line was dispatched, not
+  that the server executed it.
 - Background operation has not been fully verified: minimizing lowers vanilla
   rendering to 10 FPS, and continuous mining has an independent mouse-grab gate.
-- The protocol does not include block/inventory queries or multi-chunk
-  concurrency.
+- There is no multi-chunk concurrency.
 - A single client tick can contain at most one press/release edge per key or
   button; multiple edges inside one tick are not represented.
 
@@ -110,6 +117,7 @@ src/main/java/com/vlamarionette/marionette/
   capture/        frame grabber, JPEG encoder, latest-frame mailbox, scheduler
   state/          client tick clock and state report
   action/         raw frames, scheduler, receipts, vanilla input injection
+  query/          block/inventory reads and chat/command dispatch
   mc/             window sizing
   mixin/          render-target, focus bypass, vanilla input accessors
 src/main/resources/META-INF/neoforge.mods.toml

@@ -139,6 +139,21 @@ public final class Transport {
     }
 
     /**
+     * Queue a control message only while the current connection is still the
+     * given session. Used for delayed responses (queries/chat) whose request
+     * belongs to one connection and must not leak into a newer one.
+     */
+    public boolean offerControlFor(String expectedSessionId, JsonObject header, byte[] body) {
+        Objects.requireNonNull(expectedSessionId, "expectedSessionId");
+        Objects.requireNonNull(header, "header");
+        Conn c = conn;
+        if (c == null || !accepting || !expectedSessionId.equals(c.sessionId())) {
+            return false;
+        }
+        return enqueueControl(new Outbound(c.sessionId(), withSession(header, c.sessionId()), body));
+    }
+
+    /**
      * Replace the latest unsent frame. Returns false when not accepting or when
      * the frame was sampled in an older session.
      */

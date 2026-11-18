@@ -50,10 +50,16 @@ TCP_NODELAY is enabled.
 | mod → host | `ActionReceipt` | action lifecycle |
 | mod → host | `Pong` | reply to Ping |
 | mod → host | `ShutdownAck` | shutdown request accepted |
+| mod → host | `QueryBlockResult` | async reply to `QueryBlock` |
+| mod → host | `QueryInventoryResult` | async reply to `QueryInventory` |
+| mod → host | `ChatAck` | async reply to `Chat` |
 | host → mod | `ActionChunk` | ordered raw input frames |
 | host → mod | `Release` | interrupt current input |
 | host → mod | `Ping` | optional liveness probe |
 | host → mod | `Shutdown` | save and close the client |
+| host → mod | `QueryBlock` | read a block state / block entity |
+| host → mod | `QueryInventory` | read the selected slot and inventory |
+| host → mod | `Chat` | send one chat line, command when it starts with `/` |
 
 ## 3. `SessionInfo`
 
@@ -72,7 +78,8 @@ TCP_NODELAY is enabled.
   },
   "render": {"width": 640, "height": 360},
   "window": {"width": 640, "height": 360},
-  "capabilities": ["ping", "observation", "state", "raw_input", "shutdown"],
+  "capabilities": ["ping", "observation", "state", "raw_input", "shutdown",
+                   "query_block", "query_inventory", "chat"],
   "limits": {"max_action_frames": 20}
 }
 ```
@@ -97,6 +104,9 @@ Current capabilities:
 - `state`
 - `raw_input`
 - `shutdown`
+- `query_block`
+- `query_inventory`
+- `chat`
 
 `tick_ms` is a nominal value. The logical tick can catch up or pause; it is not a
 wall-clock guarantee.
@@ -367,6 +377,7 @@ Opening a GUI does not interrupt raw input.
 
 - Invalid framing/JSON: close the connection.
 - Invalid action shape: `rejected`, keep the connection.
+- Invalid query/chat shape: `ok:false` response with a reason, keep the connection.
 - Control queue cannot deliver receipts: close the session and release input.
 - Disconnect/release/leave world: release keys, buttons, and pending mouse.
 - Normal client shutdown releases input on a best-effort basis.
@@ -391,3 +402,189 @@ mod                          host
 
 The acceptance harness asserts the action-end state, a post-action JPEG, and a
 new session after reconnect.
+
+## 15. Queries and chat: common rules
+
+`QueryBlock`, `QueryInventory` and `Chat` are request/response messages keyed by
+`request_id`.
+
+- `request_id` is a required integer. It is opaque, echoed unchanged, and not
+  deduplicated: two requests may share an id.
+- Shape validation runs on the network thread. Block/inventory reads and chat
+  dispatch run on the client thread through `Minecraft.execute`.
+- Responses are control messages, not frames. They may interleave with `State`,
+  receipts, or each other; **responses may arrive out of order** and must be
+  correlated by `request_id`.
+- A response is only delivered while the request's session is still the current
+  connection. A delayed response from an old session is dropped.
+- At most 32 requests may be outstanding. Further requests are answered with
+  `busy` without scheduling a client-thread task.
+- Queries and chat do not touch the input lock, do not interrupt an active
+  action, and do not require `screen == null`.
+- Responses can be lost if the connection closes or the client is shutting down.
+- Every response has `type`, `request_id` (may be `null` when the request was
+  uncorrelatable), `ok`, `reason` (`null` on success), and `tick` (the client
+  tick when the response was produced).
+
+### 15.1 Failure reasons
+
+| Reason | Meaning |
+|---|---|
+| `bad_shape` | required field missing or of the wrong type |
+| `no_level` | no world or no local player |
+| `no_target` | crosshair is not on a block |
+| `chunk_not_loaded` | the requested chunk is not loaded on the client |
+| `out_of_bounds` | position outside the world build bounds |
+| `not_connected` | no `ClientPacketListener` |
+| `bad_text` | empty/oversized text, control characters, empty command |
+| `busy` | more than 32 outstanding requests |
+| `not_ready` | `Minecraft` is not constructed yet |
+| `internal` | unexpected failure; logged |
+
+## 16. `QueryBlock`
+
+Position query:
+
+```json
+{"type": "QueryBlock", "request_id": 1, "pos": [10, 64, -3]}
+```
+
+Crosshair query (omit `pos` or send `null`):
+
+```json
+{"type": "QueryBlock", "request_id": 2}
+```
+
+Success (position):
+
+```json
+{
+  "type": "QueryBlockResult",
+  "request_id": 1,
+  "ok": true,
+  "reason": null,
+  "tick": 1288,
+  "query": "pos",
+  "pos": [10, 64, -3],
+  "block_state": "minecraft:oak_log",
+  "properties": {"axis": "y"},
+  "block_entity": null
+}
+```
+
+Success (crosshair):
+
+```json
+{
+  "type": "QueryBlockResult",
+  "request_id": 2,
+  "ok": true,
+  "reason": null,
+  "tick": 1290,
+  "query": "crosshair",
+  "pos": [1, -59, 0],
+  "block_state": "minecraft:stone",
+  "properties": {},
+  "block_entity": null,
+  "distance": 2.515,
+  "face": "east"
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `pos` (request) | optional `[x,y,z]` integers; absent/null means crosshair |
+| `query` | `pos` or `crosshair` on success; absent on failure |
+| `pos` (response) | the block that was read or hit |
+| `block_state` | block id, e.g. `minecraft:stone` |
+| `properties` | block-state property names to string values; `{}` if none |
+| `block_entity` | block-entity type id, or `null`; always present |
+| `distance` | crosshair only: camera-eye distance to the hit point, 3 decimals |
+| `face` | crosshair only: hit face name |
+
+Implementation notes:
+
+- A position query checks `isInValidBounds` (`out_of_bounds`) and then asks the
+  client chunk cache with `loadOrGenerate=false` (`chunk_not_loaded`).
+  `ClientLevel.hasChunk` always returns true and cannot be used for this.
+- A crosshair query reads vanilla `Minecraft.hitResult`, which is updated once
+  per rendered frame. It is not an immediate raycast and can be up to one frame
+  stale (about 100 ms at the minimized 10 FPS). A miss or an entity hit is
+  `no_target`.
+- Only the block id, properties and block-entity type are returned; no NBT.
+
+## 17. `QueryInventory`
+
+```json
+{"type": "QueryInventory", "request_id": 4}
+```
+
+```json
+{
+  "type": "QueryInventoryResult",
+  "request_id": 4,
+  "ok": true,
+  "reason": null,
+  "tick": 1300,
+  "selected": 0,
+  "slots": [
+    {"slot": 0, "item": "minecraft:stone", "count": 5},
+    {"slot": 40, "item": "minecraft:shield", "count": 1}
+  ]
+}
+```
+
+- `selected` is the selected hotbar slot, 0–8.
+- `slots` contains non-empty slots only, sorted by slot. A missing slot is empty.
+- Slot indices follow the client inventory container: 0–8 hotbar, 9–35
+  backpack, 36–39 armor (feet, legs, chest, head), 40 offhand, 41 body,
+  42 saddle.
+- The response reflects the client's synchronized inventory, not an
+  authoritative server snapshot. A command that changes the inventory is
+  visible only after the client receives the update.
+- No NBT or item components are returned.
+
+## 18. `Chat`
+
+One chat line. A leading `/` selects the vanilla command path; otherwise the
+line is sent as a chat message.
+
+```json
+{"type": "Chat", "request_id": 6, "text": "/setblock 10 64 -3 minecraft:stone"}
+```
+
+```json
+{"type": "ChatAck", "request_id": 6, "ok": true, "reason": null,
+ "kind": "command", "tick": 1305}
+```
+
+```json
+{"type": "ChatAck", "request_id": 6, "ok": false, "reason": "bad_text",
+ "kind": null, "tick": 1305}
+```
+
+| Field | Meaning |
+|---|---|
+| `text` | required string; at most 256 characters before trimming, non-empty after trimming |
+| `kind` | `command` when the trimmed text starts with `/`, else `chat`; `null` when the text could not be parsed |
+
+Rules:
+
+- The text is trimmed at both ends only; internal whitespace is preserved (the
+  mod does not run vanilla `ChatScreen` whitespace normalization, so command
+  arguments such as quoted JSON keep their spaces).
+- Control characters (`< 0x20`, `0x7F`) are rejected. A lone `/` or an empty
+  command body is `bad_text`.
+- Exactly one leading `/` is removed before `ClientPacketListener.sendCommand`.
+  `//foo` is treated as the command `/foo`; the server reports the parse error.
+- The mod does not parse command names and keeps no allowlist or denylist.
+  `stop`, `kick`, `ban` and similar commands reach the server directly. Use
+  `Shutdown(save=true)` for a normal close.
+- The client chat screen is not opened; an action in progress is not
+  interrupted and input state does not change.
+- `ok=true` means the line was handed to `ClientPacketListener.sendCommand` or
+  `sendChat`. It does **not** mean the server executed it: missing cheats,
+  missing permissions and syntax errors are reported only in the game chat.
+  Verify effects with `QueryBlock`, `QueryInventory`, or `State`.
+- Plain chat is public in multiplayer and is subject to chat signing, server
+  filters and rate limits. It is only as safe as the host that sends it.

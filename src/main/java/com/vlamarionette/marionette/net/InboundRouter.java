@@ -6,6 +6,7 @@ import com.vlamarionette.marionette.action.ActionParseException;
 import com.vlamarionette.marionette.action.ActionReceipt;
 import com.vlamarionette.marionette.action.ActionScheduler;
 import com.vlamarionette.marionette.action.InputLock;
+import com.vlamarionette.marionette.query.QueryService;
 import com.vlamarionette.marionette.state.ClientClock;
 import net.minecraft.client.Minecraft;
 import org.slf4j.Logger;
@@ -24,7 +25,8 @@ public final class InboundRouter {
     private InboundRouter() {
     }
 
-    public static void handle(Transport transport, ActionScheduler scheduler, JsonObject message) {
+    public static void handle(Transport transport, ActionScheduler scheduler,
+            QueryService queries, JsonObject message) {
         String type = message.has("type") ? message.get("type").getAsString() : "";
         switch (type) {
             case "Ping" -> replyPong(transport, message);
@@ -32,6 +34,9 @@ public final class InboundRouter {
                     message.has("nonce") ? message.get("nonce").getAsString() : "");
             case "ActionChunk" -> handleAction(transport, scheduler, message);
             case "Shutdown" -> ShutdownHandler.handle(transport, message);
+            case "QueryBlock" -> queries.handleBlock(message);
+            case "QueryInventory" -> queries.handleInventory(message);
+            case "Chat" -> queries.handleChat(message);
             case "Release" -> {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc == null) {

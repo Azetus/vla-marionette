@@ -40,7 +40,11 @@ neoForge {
         client {
             client()
             gameDirectory = project.file('run/client')
-            programArguments = ['--username', 'VLADev']
+            def args = ['--username', 'VLADev']
+            if (project.hasProperty('vlaQuickPlayWorld')) {
+                args += ['--quickPlaySingleplayer', project.property('vlaQuickPlayWorld').toString()]
+            }
+            programArguments = args
         }
     }
 

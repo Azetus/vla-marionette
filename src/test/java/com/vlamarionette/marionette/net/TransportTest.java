@@ -1,6 +1,8 @@
 package com.vlamarionette.marionette.net;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,6 +61,20 @@ class TransportTest {
                     String secondSession = handshake.header().get("session_id").getAsString();
                     assertNotEquals(firstSession, secondSession);
                     assertEquals(secondSession, transport.sessionId());
+
+                    JsonObject stale = new JsonObject();
+                    stale.addProperty("type", "Observation");
+                    stale.addProperty("session_id", firstSession);
+                    assertFalse(transport.offerFrame(stale, new byte[]{1}));
+
+                    JsonObject frame = new JsonObject();
+                    frame.addProperty("type", "Observation");
+                    frame.addProperty("session_id", secondSession);
+                    assertTrue(transport.offerFrame(frame, new byte[]{1, 2, 3}));
+                    Framing.Frame sent = Framing.read(socket.getInputStream());
+                    assertEquals("Observation", sent.type());
+                    assertEquals(secondSession, sent.header().get("session_id").getAsString());
+                    assertArrayEquals(new byte[]{1, 2, 3}, sent.body());
                 }
             } finally {
                 transport.stop();

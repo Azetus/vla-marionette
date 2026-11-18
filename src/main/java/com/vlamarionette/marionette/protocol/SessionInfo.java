@@ -59,6 +59,7 @@ public final class SessionInfo {
 
         JsonArray capabilities = new JsonArray();
         capabilities.add("ping");
+        capabilities.add("observation");
         info.add("capabilities", capabilities);
 
         info.add("controls", new JsonObject());

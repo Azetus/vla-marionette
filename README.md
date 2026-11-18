@@ -9,16 +9,18 @@ model-side conversion constants.
 
 ## Status
 
-G1 and G2 are complete. The repository contains:
+G1, G2, and G3 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
 - A client entry point and TCP transport.
 - SessionInfo handshake, per-connection session ids, Ping/Pong, and reconnect.
-- Mod metadata and an empty mixin configuration.
+- Fixed-size window and render target, main-target capture, JPEG encoding, and
+  wall-clock 5 Hz sampling with HUD kept.
+- Mod metadata and a render-target mixin.
 
-Build, unit tests, dev-client load, and a real handshake have been verified. No
-frame capture, state reporting, or control injection is implemented yet. Do not
-treat the current transport as a working M1 loop.
+Build, unit tests, dev-client load, a real handshake, and real frame capture have
+been verified. No state reporting or control injection is implemented yet. Do
+not treat the current capture as a working M1 loop.
 
 ## Requirements
 
@@ -59,10 +61,15 @@ mise exec -- .\gradlew.bat test --console=plain
 src/main/java/com/vlamarionette/marionette/
   protocol/       wire framing and SessionInfo
   net/            transport, connection lifecycle, inbound routing
+  capture/        frame grabber, JPEG encoder, latest-frame mailbox, scheduler
+  state/          client tick clock
+  mc/             window sizing
+  mixin/          render-target resize
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
 src/test/java/    pure unit tests (no game process)
 tools/build.ps1
+tools/g3-capture-check.mjs
 tools/mc.local.example.ps1
 mise.toml
 ```

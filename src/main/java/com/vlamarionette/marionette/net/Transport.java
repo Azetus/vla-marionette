@@ -138,14 +138,23 @@ public final class Transport {
         return enqueueControl(new Outbound(c.sessionId(), withSession(header, c.sessionId()), body));
     }
 
-    /** Replace the latest unsent frame. Returns false when not accepting. */
+    /**
+     * Replace the latest unsent frame. Returns false when not accepting or when
+     * the frame was sampled in an older session.
+     */
     public boolean offerFrame(JsonObject header, byte[] body) {
         Objects.requireNonNull(header, "header");
         Conn c = conn;
         if (c == null || !accepting) {
             return false;
         }
-        latestFrame.set(new Outbound(c.sessionId(), withSession(header, c.sessionId()), body));
+        String frameSession = header.has("session_id")
+                ? header.get("session_id").getAsString()
+                : c.sessionId();
+        if (!frameSession.equals(c.sessionId())) {
+            return false;
+        }
+        latestFrame.set(new Outbound(frameSession, withSession(header, frameSession), body));
         return true;
     }
 

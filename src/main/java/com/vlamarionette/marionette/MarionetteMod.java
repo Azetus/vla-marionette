@@ -9,6 +9,7 @@ import com.vlamarionette.marionette.net.InboundRouter;
 import com.vlamarionette.marionette.net.Transport;
 import com.vlamarionette.marionette.protocol.SessionInfo;
 import com.vlamarionette.marionette.state.ClientClock;
+import com.vlamarionette.marionette.state.StateReporter;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -33,6 +34,7 @@ public final class MarionetteMod {
     private final Transport transport;
     private final FrameMailbox frameMailbox;
     private final CaptureScheduler captureScheduler;
+    private final StateReporter stateReporter;
 
     public MarionetteMod(IEventBus modBus) {
         BridgeConfig config = BridgeConfig.fromSystemProperties();
@@ -46,10 +48,13 @@ public final class MarionetteMod {
                 CaptureSpec.ENCODE_WIDTH, CaptureSpec.ENCODE_HEIGHT, CaptureSpec.JPEG_QUALITY);
         frameMailbox.start();
         captureScheduler = new CaptureScheduler(transport, frameMailbox);
+        stateReporter = new StateReporter(transport, captureScheduler);
 
         NeoForge.EVENT_BUS.addListener(ClientClock::onClientTick);
         NeoForge.EVENT_BUS.addListener(WindowLayout::onClientTick);
         NeoForge.EVENT_BUS.addListener(captureScheduler::onRenderFrame);
+        NeoForge.EVENT_BUS.addListener(stateReporter::onClientTick);
+        NeoForge.EVENT_BUS.addListener(stateReporter::onRenderFrame);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             frameMailbox.stop();

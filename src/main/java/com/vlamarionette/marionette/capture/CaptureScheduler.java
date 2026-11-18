@@ -41,6 +41,10 @@ public final class CaptureScheduler {
         return status.get();
     }
 
+    public int encodeFailures() {
+        return mailbox.encodeFailures();
+    }
+
     public void onRenderFrame(RenderFrameEvent.Post event) {
         long now = System.nanoTime();
         if (now < nextFrameNanos) {

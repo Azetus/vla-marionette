@@ -1,6 +1,7 @@
 package com.vlamarionette.marionette.protocol;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import java.io.EOFException;
@@ -29,7 +30,8 @@ public final class Framing {
     public static final int MAX_HEADER_BYTES = 64 * 1024;
     public static final int MAX_BODY_BYTES = 16 * 1024 * 1024;
 
-    private static final Gson GSON = new Gson();
+    // Explicit null fields are part of the State schema; do not let Gson drop them.
+    private static final Gson GSON = new GsonBuilder().serializeNulls().create();
 
     private Framing() {
     }

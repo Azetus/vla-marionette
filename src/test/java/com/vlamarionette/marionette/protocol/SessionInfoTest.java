@@ -33,9 +33,10 @@ class SessionInfoTest {
     void onlyAdvertisesImplementedG2Capabilities() {
         JsonObject info = SessionInfo.create("session-2");
 
-        assertEquals(2, info.getAsJsonArray("capabilities").size());
+        assertEquals(3, info.getAsJsonArray("capabilities").size());
         assertEquals("ping", info.getAsJsonArray("capabilities").get(0).getAsString());
         assertEquals("observation", info.getAsJsonArray("capabilities").get(1).getAsString());
+        assertEquals("state", info.getAsJsonArray("capabilities").get(2).getAsString());
         assertTrue(info.getAsJsonObject("controls").entrySet().isEmpty());
         assertEquals(20, info.getAsJsonObject("limits").get("max_chunk_ticks").getAsInt());
     }

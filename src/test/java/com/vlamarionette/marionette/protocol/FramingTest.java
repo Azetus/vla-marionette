@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,6 +46,19 @@ class FramingTest {
         Framing.Frame decoded = Framing.read(slow);
         assertEquals("Ping", decoded.type());
         assertEquals(0, decoded.body().length);
+    }
+
+    @Test
+    void preservesExplicitNullFields() throws Exception {
+        JsonObject header = new JsonObject();
+        header.addProperty("type", "State");
+        header.add("screen", JsonNull.INSTANCE);
+
+        byte[] encoded = Framing.encode(header, null);
+        Framing.Frame decoded = Framing.read(new ByteArrayInputStream(encoded));
+
+        assertTrue(decoded.header().has("screen"));
+        assertTrue(decoded.header().get("screen").isJsonNull());
     }
 
     @Test

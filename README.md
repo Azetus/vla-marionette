@@ -9,18 +9,20 @@ model-side conversion constants.
 
 ## Status
 
-G1, G2, and G3 are complete. The repository contains:
+G1, G2, G3, and G4 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
 - A client entry point and TCP transport.
 - SessionInfo handshake, per-connection session ids, Ping/Pong, and reconnect.
 - Fixed-size window and render target, main-target capture, JPEG encoding, and
   wall-clock 5 Hz sampling with HUD kept.
+- A periodic state report with world/position/health/screen and capture status,
+  including explicit no-world reasons.
 - Mod metadata and a render-target mixin.
 
-Build, unit tests, dev-client load, a real handshake, and real frame capture have
-been verified. No state reporting or control injection is implemented yet. Do
-not treat the current capture as a working M1 loop.
+Build, unit tests, dev-client load, a real handshake, real frame capture, and
+state sampling have been verified. No control injection or action receipts are
+implemented yet. Do not treat the current capture/state as a working M1 loop.
 
 ## Requirements
 

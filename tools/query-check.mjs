@@ -300,6 +300,11 @@ async function run() {
   const crossX = bx - 3;
   const crossY = by + 1;
   const crossZ = bz;
+  // Clear the eye-level corridor so leftover blocks from earlier runs cannot
+  // intercept the crosshair ray before the target block.
+  ack = await chat(`/fill ${bx - 4} ${by + 1} ${bz} ${bx - 1} ${by + 1} ${bz} air`);
+  check(ack.ok === true && ack.kind === "command", "clear crosshair corridor accepted");
+  await sleep(300);
   ack = await chat(`/setblock ${crossX} ${crossY} ${crossZ} minecraft:stone`);
   check(ack.ok === true, "setblock crosshair target accepted");
   await sleep(500);

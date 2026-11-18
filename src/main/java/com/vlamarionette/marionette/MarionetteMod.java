@@ -1,5 +1,7 @@
 package com.vlamarionette.marionette;
 
+import com.vlamarionette.marionette.action.ActionScheduler;
+import com.vlamarionette.marionette.action.McInputInjector;
 import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureSpec;
 import com.vlamarionette.marionette.capture.FrameMailbox;
@@ -10,9 +12,11 @@ import com.vlamarionette.marionette.net.Transport;
 import com.vlamarionette.marionette.protocol.SessionInfo;
 import com.vlamarionette.marionette.state.ClientClock;
 import com.vlamarionette.marionette.state.StateReporter;
+import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,13 +39,39 @@ public final class MarionetteMod {
     private final FrameMailbox frameMailbox;
     private final CaptureScheduler captureScheduler;
     private final StateReporter stateReporter;
+    private final ActionScheduler actionScheduler;
+    private boolean focusPauseDisabled;
 
     public MarionetteMod(IEventBus modBus) {
         BridgeConfig config = BridgeConfig.fromSystemProperties();
         transport = new Transport(config, SessionInfo::create);
-        transport.setInboundHandler(message -> InboundRouter.handle(transport, message));
-        transport.setOnConnect(session -> LOG.info("[vla] bridge session {}", session));
-        transport.setOnDisconnect(() -> LOG.info("[vla] bridge disconnected"));
+
+        McInputInjector inputInjector = new McInputInjector();
+        actionScheduler = new ActionScheduler(inputInjector, receipt -> {
+            if (!transport.offerControl(receipt, null)) {
+                LOG.debug("[vla] could not enqueue action receipt (session not accepting)");
+            }
+        });
+        transport.setInboundHandler(message -> InboundRouter.handle(transport, actionScheduler, message));
+        transport.setOnConnect(session -> {
+            LOG.info("[vla] bridge session {}", session);
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null) {
+                // The first connection can win the race against Minecraft's construction.
+                actionScheduler.resetSession();
+            } else {
+                mc.execute(actionScheduler::newSession);
+            }
+        });
+        transport.setOnDisconnect(() -> {
+            LOG.info("[vla] bridge disconnected");
+            Minecraft mc = Minecraft.getInstance();
+            if (mc == null) {
+                actionScheduler.resetSession();
+            } else {
+                mc.execute(() -> actionScheduler.release(ClientClock.tick(), "disconnected"));
+            }
+        });
         transport.start();
 
         frameMailbox = new FrameMailbox(transport::offerFrame,
@@ -51,6 +81,8 @@ public final class MarionetteMod {
         stateReporter = new StateReporter(transport, captureScheduler);
 
         NeoForge.EVENT_BUS.addListener(ClientClock::onClientTick);
+        NeoForge.EVENT_BUS.addListener(this::onClientTickPre);
+        NeoForge.EVENT_BUS.addListener(this::onClientTickPost);
         NeoForge.EVENT_BUS.addListener(WindowLayout::onClientTick);
         NeoForge.EVENT_BUS.addListener(captureScheduler::onRenderFrame);
         NeoForge.EVENT_BUS.addListener(stateReporter::onClientTick);
@@ -62,5 +94,25 @@ public final class MarionetteMod {
         }, "vla-shutdown"));
 
         LOG.info("[vla] VLA-Marionette loaded (client, MC 26.1.2 / NeoForge 26.1.2.126)");
+    }
+
+    private void onClientTickPre(ClientTickEvent.Pre event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (!focusPauseDisabled) {
+            mc.options.pauseOnLostFocus = false;
+            focusPauseDisabled = true;
+            LOG.info("[vla] disabled focus-loss auto-pause");
+        }
+
+        long tick = ClientClock.tick();
+        if (mc.level == null) {
+            actionScheduler.release(tick, "no_level");
+            return;
+        }
+        actionScheduler.onPre(tick);
+    }
+
+    private void onClientTickPost(ClientTickEvent.Post event) {
+        actionScheduler.onPost(ClientClock.tick());
     }
 }

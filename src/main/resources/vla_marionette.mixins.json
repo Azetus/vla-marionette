@@ -4,7 +4,10 @@
   "package": "com.vlamarionette.marionette.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "GameRendererResizeMixin"
+    "GameRendererResizeMixin",
+    "KeyboardHandlerAccessor",
+    "MouseHandlerAccessor",
+    "MinecraftFocusMixin"
   ],
   "injectors": {
     "defaultRequire": 1

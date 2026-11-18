@@ -9,7 +9,7 @@ model-side conversion constants.
 
 ## Status
 
-G1, G2, G3, and G4 are complete. The repository contains:
+G1 through G5 are complete. The repository contains:
 
 - Gradle/NeoForge build setup and wrapper.
 - A client entry point and TCP transport.
@@ -18,11 +18,13 @@ G1, G2, G3, and G4 are complete. The repository contains:
   wall-clock 5 Hz sampling with HUD kept.
 - A periodic state report with world/position/health/screen and capture status,
   including explicit no-world reasons.
-- Mod metadata and a render-target mixin.
+- Raw per-tick input frames (GLFW keyboard/mouse codes plus client-area mouse
+  pixels), action scheduling, and received/applied/ended receipts.
+- Mod metadata and input/render mixins.
 
-Build, unit tests, dev-client load, a real handshake, real frame capture, and
-state sampling have been verified. No control injection or action receipts are
-implemented yet. Do not treat the current capture/state as a working M1 loop.
+Build, unit tests, dev-client load, a real handshake, frame capture, state
+sampling, a real forward action, and a GUI raw-input smoke have been verified.
+The M1 acceptance harness and three-run acceptance are not implemented yet.
 
 ## Requirements
 
@@ -64,14 +66,18 @@ src/main/java/com/vlamarionette/marionette/
   protocol/       wire framing and SessionInfo
   net/            transport, connection lifecycle, inbound routing
   capture/        frame grabber, JPEG encoder, latest-frame mailbox, scheduler
-  state/          client tick clock
+  state/          client tick clock and state report
+  action/         raw frames, scheduler, receipts, vanilla input injection
   mc/             window sizing
-  mixin/          render-target resize
+  mixin/          render-target, focus bypass, vanilla input accessors
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
 src/test/java/    pure unit tests (no game process)
 tools/build.ps1
 tools/g3-capture-check.mjs
+tools/g4-state-check.mjs
+tools/g5-action-check.mjs
+tools/g5-gui-check.mjs
 tools/mc.local.example.ps1
 mise.toml
 ```

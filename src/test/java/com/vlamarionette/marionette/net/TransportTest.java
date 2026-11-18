@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
+import com.vlamarionette.marionette.action.ActionFrame;
+import com.vlamarionette.marionette.action.ActionScheduler;
+import com.vlamarionette.marionette.action.InputSink;
 import com.vlamarionette.marionette.protocol.Framing;
 import com.vlamarionette.marionette.protocol.SessionInfo;
 import java.net.InetAddress;
@@ -28,7 +31,21 @@ class TransportTest {
                     SessionInfo::create);
             CountDownLatch disconnected = new CountDownLatch(1);
             transport.setOnDisconnect(disconnected::countDown);
-            transport.setInboundHandler(message -> InboundRouter.handle(transport, message));
+            ActionScheduler scheduler = new ActionScheduler(new InputSink() {
+                @Override
+                public void applyFrame(ActionFrame frame) {
+                }
+
+                @Override
+                public void flushMouse() {
+                }
+
+                @Override
+                public void releaseAll() {
+                }
+            }, receipt -> {
+            });
+            transport.setInboundHandler(message -> InboundRouter.handle(transport, scheduler, message));
             transport.start();
 
             try {

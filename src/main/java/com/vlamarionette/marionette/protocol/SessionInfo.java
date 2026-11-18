@@ -59,6 +59,7 @@ public final class SessionInfo {
         capabilities.add("ping");
         capabilities.add("observation");
         capabilities.add("state");
+        capabilities.add("raw_input");
         info.add("capabilities", capabilities);
 
         JsonObject limits = new JsonObject();

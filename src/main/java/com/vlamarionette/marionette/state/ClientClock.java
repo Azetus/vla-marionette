@@ -11,7 +11,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  */
 public final class ClientClock {
 
-    private static long tick;
+    private static volatile long tick;
 
     private ClientClock() {
     }

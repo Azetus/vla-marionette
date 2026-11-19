@@ -65,5 +65,7 @@ run.
   `IsIconic` before the minimized runs.
 - The minimized capture run is one 30 s sample in this regression; earlier
   standalone runs measured 4.83 and 4.85 Hz.
-- A visible-but-unfocused window, long-duration runs, multiplayer servers and
+- Normal-window runs were observed with the client unfocused and occluded by
+  other windows; functional checks passed. No separate cadence comparison was
+  made for that condition. Long-duration runs, multiplayer servers and
   tool-specific mining are not covered.

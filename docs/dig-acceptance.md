@@ -18,7 +18,8 @@ hand-mined dirt block (one 20-tick chunk) and a hand-mined stone block (about
    ```
 
 4. For the background run, minimize the window before starting the host; for the
-   foreground run, keep the window focused.
+   foreground run, keep the window open. Focus is not required: the acceptance
+   runs were observed with the client unfocused and occluded by other windows.
 
 For each block the host performs the setup itself:
 
@@ -56,7 +57,7 @@ Initial single-block runs, each with 18 checks:
 
 | Run | Window | Target before | Target after | Chunks | Held |
 |---|---|---|---|---|---|
-| 1 | focused | dirt | air | 1 | `[0]` |
+| 1 | foreground | dirt | air | 1 | `[0]` |
 | 2 | minimized after world load | dirt | air | 1 | `[0]` |
 | 3 | minimized before world load | dirt | air | 1 | `[0]` |
 
@@ -64,8 +65,8 @@ Two-block regression on the same build, each with 62 checks:
 
 | Run | Window | Block | Chunks | Ticks | Target after | Held | Receipts |
 |---|---|---|---|---|---|---|---|
-| 1 | focused | dirt | 1 | 20 | air | `[0]` | 3 |
-| 1 | focused | stone | 8 | 160 | air | `[0]` | 24 |
+| 1 | foreground | dirt | 1 | 20 | air | `[0]` | 3 |
+| 1 | foreground | stone | 8 | 160 | air | `[0]` | 24 |
 | 2 | minimized | dirt | 1 | 20 | air | `[0]` | 3 |
 | 2 | minimized | stone | 8 | 160 | air | `[0]` | 24 |
 
@@ -101,7 +102,9 @@ against this gate.
   mining (pickaxe, axe, shovel) and block drops are not separately asserted.
 - Mining multiple different blocks in one continuous hold, and mining while
   walking, are not covered.
-- A visible but unfocused window is not separately measured; minimized is the
-  harder case and implies the window is not focused.
+- The foreground runs were observed with the client unfocused and occluded by
+  other windows; the mouse-grab gate still held. A separate focused/unfocused
+  cadence comparison was not made; minimized is the harder case.
 - The test uses `Chat` for setup, which also exercises the chat path in the
   minimized case.
+

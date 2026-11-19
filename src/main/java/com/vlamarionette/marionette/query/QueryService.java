@@ -136,7 +136,7 @@ public final class QueryService {
                         settings.invertMouseX(), settings.invertMouseY(),
                         settings.smoothCamera(), settings.cameraType(),
                         settings.scoping(), settings.guiScale(), settings.guiWidth(),
-                        settings.guiHeight()));
+                        settings.guiHeight(), settings.keybinds()));
             } catch (QueryFailure failure) {
                 respond(session, QueryResponses.settingsError(request.requestId(),
                         ClientClock.tick(), failure.reason()));

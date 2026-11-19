@@ -2,12 +2,16 @@ package com.vlamarionette.marionette.query;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import com.mojang.blaze3d.platform.InputConstants;
+import com.vlamarionette.marionette.mixin.KeyMappingAccessor;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -106,6 +110,13 @@ public final class McQueryReader {
         }
         Options options = mc.options;
         GameType gameMode = player.gameMode();
+        List<QueryResponses.Keybind> keybinds = new ArrayList<>();
+        for (KeyMapping mapping : options.keyMappings) {
+            InputConstants.Key key = ((KeyMappingAccessor) mapping).vla$getKey();
+            String type = key.getType().name().toLowerCase(Locale.ROOT);
+            keybinds.add(new QueryResponses.Keybind(mapping.getName(), type,
+                    mapping.isUnbound() ? null : key.getValue()));
+        }
         return new SettingsSnapshot(
                 gameMode == null ? null : gameMode.getName(),
                 options.sensitivity().get(),
@@ -116,7 +127,8 @@ public final class McQueryReader {
                 player.isScoping(),
                 mc.getWindow().getGuiScale(),
                 mc.getWindow().getGuiScaledWidth(),
-                mc.getWindow().getGuiScaledHeight());
+                mc.getWindow().getGuiScaledHeight(),
+                List.copyOf(keybinds));
     }
 
     /**
@@ -191,7 +203,11 @@ public final class McQueryReader {
     public record SettingsSnapshot(String gameMode, double sensitivity,
             boolean invertMouseX, boolean invertMouseY, boolean smoothCamera,
             String cameraType, boolean scoping, int guiScale, int guiWidth,
-            int guiHeight) {
+            int guiHeight, List<QueryResponses.Keybind> keybinds) {
+
+        public SettingsSnapshot {
+            keybinds = List.copyOf(keybinds);
+        }
     }
 }
 

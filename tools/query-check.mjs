@@ -215,6 +215,22 @@ async function run() {
   check(Number.isInteger(settings.gui_width) && settings.gui_width > 0 &&
     Number.isInteger(settings.gui_height) && settings.gui_height > 0,
     `settings gui size: ${settings.gui_width}x${settings.gui_height}`);
+  const keybinds = settings.keybinds;
+  check(keybinds && typeof keybinds === "object" && !Array.isArray(keybinds),
+    "settings keybinds object");
+  check(Object.keys(keybinds).length >= 40,
+    `settings keybind count: ${Object.keys(keybinds).length}`);
+  check(keybinds["key.forward"]?.type === "keysym" &&
+    keybinds["key.forward"]?.code === 87, "key.forward is W (87)");
+  check(keybinds["key.attack"]?.type === "mouse" &&
+    keybinds["key.attack"]?.code === 0, "key.attack is mouse 0");
+  check(keybinds["key.use"]?.type === "mouse" &&
+    keybinds["key.use"]?.code === 1, "key.use is mouse 1");
+  check(keybinds["key.hotbar.1"]?.type === "keysym" &&
+    keybinds["key.hotbar.1"]?.code === 49, "key.hotbar.1 is 1 (49)");
+  check(keybinds["key.drop"]?.type === "keysym" &&
+    keybinds["key.drop"]?.code === 81, "key.drop is Q (81)");
+  check(keybinds["key.smoothCamera"] === null, "unbound mapping is null");
 
   const bx = Math.floor(state0.x);
   const by = Math.floor(state0.y);

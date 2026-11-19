@@ -87,7 +87,7 @@ public final class QueryResponses {
     public static JsonObject settingsOk(int requestId, long tick, String gameMode,
             double sensitivity, boolean invertMouseX, boolean invertMouseY,
             boolean smoothCamera, String cameraType, boolean scoping,
-            int guiScale, int guiWidth, int guiHeight) {
+            int guiScale, int guiWidth, int guiHeight, List<Keybind> keybinds) {
         JsonObject json = base("QuerySettingsResult", requestId, true, null, tick);
         if (gameMode == null) {
             json.add("gamemode", JsonNull.INSTANCE);
@@ -103,6 +103,19 @@ public final class QueryResponses {
         json.addProperty("gui_scale", guiScale);
         json.addProperty("gui_width", guiWidth);
         json.addProperty("gui_height", guiHeight);
+
+        JsonObject binds = new JsonObject();
+        keybinds.stream().sorted().forEach(bind -> {
+            if (bind.code() == null) {
+                binds.add(bind.name(), JsonNull.INSTANCE);
+            } else {
+                JsonObject entry = new JsonObject();
+                entry.addProperty("type", bind.type());
+                entry.addProperty("code", bind.code());
+                binds.add(bind.name(), entry);
+            }
+        });
+        json.add("keybinds", binds);
         return json;
     }
 
@@ -149,6 +162,21 @@ public final class QueryResponses {
 
         public Slot {
             Objects.requireNonNull(item, "item");
+        }
+    }
+
+    /** One current keybind. A null code means the mapping is unbound. */
+    public record Keybind(String name, String type, Integer code)
+            implements Comparable<Keybind> {
+
+        public Keybind {
+            Objects.requireNonNull(name, "name");
+            Objects.requireNonNull(type, "type");
+        }
+
+        @Override
+        public int compareTo(Keybind other) {
+            return name.compareTo(other.name);
         }
     }
 }

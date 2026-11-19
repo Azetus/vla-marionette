@@ -3,7 +3,7 @@
 This check answers one question: with the client window minimized, can the
 device layer still produce observations at the 5 Hz target and inject a forward
 action? It is a post-M1 check; the M1 loop acceptance in
-[m1-acceptance.md](m1-acceptance.md) covers the normal focused client.
+[m1-acceptance.md](m1-acceptance.md) covers the normal client window.
 
 ## Why it matters
 
@@ -62,7 +62,7 @@ Both runs failed the 4.5 Hz gate. No observation-id gaps, no encoder failures,
 and all frames were valid 854×480 JPEGs, but the 300 ms slips were too frequent.
 
 A client mixin raises the minimized frame limit from 10 to 30 FPS
-(`FramerateLimitTrackerMixin`); normal focused rendering, AFK limits and every
+(`FramerateLimitTrackerMixin`); normal-window rendering, AFK limits and every
 other throttle reason are unchanged. Two 30 s runs after the change:
 
 | Run | Observations | FPS | p50 | p95 | Max | Forward distance | Dot | dy |
@@ -87,7 +87,10 @@ image.
   minimized.
 - The window was minimized programmatically with the Win32 `ShowWindow` call and
   verified with `IsIconic`; no manual minimize step is required.
-- A visible but unfocused window is not separately measured here. Minimized is
-  the harder case for capture; the injected-input path is shared.
+- The normal-window runs were observed with the client unfocused and occluded by
+  other application windows; their functional checks passed. No separate
+  cadence comparison was made for that condition. Minimized is the harder case
+  for capture because it also lowers the render FPS; the injected-input path is
+  shared.
 - Continuous mining is not part of this check; it has an independent
   `MouseHandler.isMouseGrabbed()` gate and is covered by the next step.

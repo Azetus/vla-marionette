@@ -389,6 +389,10 @@ Opening a GUI does not interrupt raw input.
   `manual_takeover`.
 - `State.input_locked` is true while physical input is suppressed; false during
   pause takeover and after disconnect.
+- The lock arms during session setup. A `State` sampled immediately after
+  `SessionInfo` can still report `input_locked=false`; a host must wait for a
+  `State` with `input_locked=true` before sending `ActionChunk`. The mod does
+  not treat this as an error.
 - `State.held` reports the actual raw held keys/buttons, including injected
   input and physical input that is currently allowed.
 
@@ -633,7 +637,13 @@ on-demand snapshot, not a 10 Hz state field.
   "scoping": false,
   "gui_scale": 1,
   "gui_width": 640,
-  "gui_height": 360
+  "gui_height": 360,
+  "keybinds": {
+    "key.forward": {"type": "keysym", "code": 87},
+    "key.attack": {"type": "mouse", "code": 0},
+    "key.hotbar.1": {"type": "keysym", "code": 49},
+    "key.smoothCamera": null
+  }
 }
 ```
 
@@ -647,13 +657,24 @@ on-demand snapshot, not a 10 Hz state field.
 | `scoping` | player is currently using a spyglass |
 | `gui_scale` | current GUI scale |
 | `gui_width/gui_height` | current GUI-scaled dimensions |
+| `keybinds` | all current `KeyMapping`s, keyed by technical mapping name |
+
+`keybinds` is the full table (`Options.keyMappings`, including hotbar and debug
+mappings), read-only:
+
+- value `null` means the mapping is unbound;
+- otherwise `type` is `keysym`, `scancode` or `mouse`, and `code` is the GLFW key
+  code or mouse button;
+- entries are sorted by mapping name; unknown names are ignored by the host;
+- it is a snapshot of the current options, not defaults; the mod does not
+  validate, normalize or modify bindings;
+- `scancode` bindings are returned for completeness but cannot be expressed by
+  `ActionChunk` (which accepts keysym codes and mouse buttons only).
 
 - Read on the client thread with the same `request_id`, pending limit and
   session guard as the other queries.
 - The values reflect client settings at read time; an options change is visible
   to the next query.
-- The keybind table is not included; the host is expected to use the client's
-  configured keybinds (the reference client uses vanilla defaults).
 - The camera pixel-to-degree mapping stays host-side. For reference, vanilla
   applies `sensMod = (sensitivity * 0.6 + 0.2)^3`, then multiplies mouse pixels
   by `sensMod * 1.2` in normal view (and `sensMod * 0.15` while scoping), with

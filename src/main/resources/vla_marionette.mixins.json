@@ -8,6 +8,7 @@
     "GameRendererResizeMixin",
     "KeyboardHandlerAccessor",
     "KeyboardHandlerMixin",
+    "KeyMappingAccessor",
     "MinecraftModifierMixin",
     "MouseHandlerAccessor",
     "MouseHandlerMixin",

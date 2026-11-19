@@ -253,15 +253,26 @@ Q alone still drops one item.
 
 `QuerySettings` returns the client settings that affect action mapping:
 `gamemode`, `sensitivity`, mouse inversion, smooth camera, camera type,
-scoping, GUI scale and GUI-scaled dimensions. It is a request/response query,
-not a 10 Hz `State` field.
+scoping, GUI scale, GUI-scaled dimensions, and the full current keybind table.
+It is a request/response query, not a 10 Hz `State` field.
 
-Reason: camera pixels to degrees and GUI slot coordinates depend on client
-options, but options change rarely and do not belong in the per-tick state
-stream. A query keeps `State` lean and lets the host refresh after an options
-change. The keybind table is not included; the host uses the client's configured
-keybinds (vanilla defaults for the reference client). Sneaking/sprinting are not
-added to `State`; the host or tests infer them from movement speed.
+Reason: camera pixels to degrees, GUI slot coordinates, and semantic action
+names depend on client options, but options change rarely and do not belong in
+the per-tick state stream. A query keeps `State` lean and lets the host refresh
+after an options change. The table is read-only and keyed by `KeyMapping` name;
+unbound mappings are `null`. It is not curated: keys outside the action matrix
+are still valid `ActionChunk` input. Sneaking/sprinting are not added to
+`State`; the host or tests infer them from movement speed.
+
+## D23. The host waits for the input lock before acting
+
+`InputLock.arm()` is part of session setup, but the first `State` after
+`SessionInfo` can be sampled before arm and therefore report
+`input_locked=false`. That snapshot is truthful, not a lock failure. The host
+must wait for `State.input_locked == true` before sending `ActionChunk`; the
+reference tools use this condition. The mod does not reorder the handshake or
+reject early actions for this transient. If strict first-state ordering is
+needed later, arm before the handshake or add a `not_armed` rejection.
 
 ## Known gaps
 
@@ -276,5 +287,6 @@ These are current limitations, not decisions to keep forever:
 - no freeze is intentional and permanent for v1;
 - query/chat responses are best effort during shutdown;
 - command dispatch is not sandboxed; the host is responsible for what it sends;
-- a visible but unfocused window is not separately measured; minimized is the
-  harder capture case.
+- normal-window runs were observed with the client unfocused and occluded by
+  other windows; that condition is covered functionally, but was not separately
+  cadence-measured; minimized is the harder capture case.

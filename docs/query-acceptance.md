@@ -43,7 +43,8 @@ a known stack, so a previous run cannot change the expected counts.
 |---|---|
 | Handshake | 854×480 JPEG spec; render target 640×360; capabilities include `query_block`, `query_inventory`, `chat`, `query_settings` |
 | State | in world, screen closed, on ground, input lock armed |
-| Settings | `QuerySettings` returns a valid game mode, sensitivity 0–1, boolean invert/smooth/scoping flags, a known camera type, and positive GUI scale/dimensions |
+| Settings | `QuerySettings` returns a valid game mode, sensitivity 0–1, boolean invert/smooth/scoping flags, a known camera type, positive GUI scale/dimensions, and a full keybind table |
+| Keybinds | table has ≥40 entries; `key.forward`=W 87, `key.attack`=mouse 0, `key.use`=mouse 1, `key.hotbar.1`=1 49, `key.drop`=Q 81; unbound `key.smoothCamera` is `null` |
 | Chat command | `clear`, `give`, `setblock`, `tp` return `ChatAck(ok=true, kind=command)` |
 | Chat chat | a line without `/` returns `kind=chat` |
 | Inventory | after `clear` the slots array is empty; after `give` 5 stone the stone is in the hotbar with count 5 and `selected=0` |
@@ -67,6 +68,9 @@ a known stack, so a previous run cannot change the expected counts.
   the settings response reported `gamemode=survival`, `sensitivity=0.5`,
   `camera_type=first_person`, `gui_scale=1`, `gui_width=640`, `gui_height=360`.
   The earlier 46-check runs above were before the settings query existed.
+- After the full keybind table was added, the installed client run passed 63
+  checks; the table had 60 entries, including `key.forward`, `key.attack`,
+  `key.hotbar.1`, and the unbound `key.smoothCamera` as `null`.
 
 ## What is not machine-verified
 

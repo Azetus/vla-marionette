@@ -25,7 +25,7 @@ client:
 - minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward
   injection while minimized;
 - continuous mining with held left-button frames, hand-mined dirt and stone,
-  focused and minimized;
+  in a normal window and minimized;
 - reconnect as a new session;
 - graceful host-initiated shutdown with integrated-server save.
 
@@ -115,7 +115,8 @@ window to close first; forced PID termination is only a timeout fallback.
   that the server executed it.
 - Minimized capture and forward injection are verified. A minimized window
   renders at 30 FPS instead of vanilla's 10, which keeps 5 Hz capture at
-  ~4.8 Hz. A visible-but-unfocused window is not separately measured.
+  ~4.8 Hz. Normal-window runs were observed with the client unfocused and
+  occluded by other windows; no separate cadence comparison was made.
 - Continuous mining with held left-button frames is verified for hand-mined dirt
   and stone, focused and minimized. Stone takes eight chained chunks by hand.
   Tool-specific mining, block drops and mining multiple blocks in one hold are

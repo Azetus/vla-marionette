@@ -100,7 +100,10 @@ class QueryResponsesTest {
     @Test
     void serializesSettingsResult() {
         JsonObject json = QueryResponses.settingsOk(9, 1302, "survival", 0.5,
-                false, true, false, "first_person", false, 2, 320, 180);
+                false, true, false, "first_person", false, 2, 320, 180,
+                List.of(new QueryResponses.Keybind("key.attack", "mouse", 0),
+                        new QueryResponses.Keybind("key.forward", "keysym", 87),
+                        new QueryResponses.Keybind("key.smoothCamera", "keysym", null)));
 
         assertEquals("QuerySettingsResult", json.get("type").getAsString());
         assertEquals(9, json.get("request_id").getAsInt());
@@ -116,6 +119,22 @@ class QueryResponsesTest {
         assertEquals(2, json.get("gui_scale").getAsInt());
         assertEquals(320, json.get("gui_width").getAsInt());
         assertEquals(180, json.get("gui_height").getAsInt());
+
+        JsonObject keybinds = json.getAsJsonObject("keybinds");
+        assertEquals(3, keybinds.size());
+        assertEquals("mouse", keybinds.getAsJsonObject("key.attack")
+                .get("type").getAsString());
+        assertEquals(0, keybinds.getAsJsonObject("key.attack")
+                .get("code").getAsInt());
+        assertEquals("keysym", keybinds.getAsJsonObject("key.forward")
+                .get("type").getAsString());
+        assertEquals(87, keybinds.getAsJsonObject("key.forward")
+                .get("code").getAsInt());
+        assertTrue(keybinds.get("key.smoothCamera").isJsonNull());
+        Iterator<String> names = keybinds.keySet().iterator();
+        assertEquals("key.attack", names.next());
+        assertEquals("key.forward", names.next());
+        assertEquals("key.smoothCamera", names.next());
     }
 
     @Test

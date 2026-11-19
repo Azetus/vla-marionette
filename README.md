@@ -1,59 +1,49 @@
 # VLA-Marionette
 
-A NeoForge client-side mod for Minecraft 26.1.2 (NeoForge 26.1.2.126).
+一个面向 Minecraft 26.1.2（NeoForge 26.1.2.126）的 NeoForge 客户端 mod。
 
-VLA-Marionette is a **device layer**. It exposes the game client to an external
-controller through frame capture, state reporting, tick-level raw input
-injection, and action receipts. It does not contain model prompts, action-text
-parsing, model vocabulary, or model-side conversion constants.
+VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tick 原始输入注入和动作
+回执，把游戏客户端暴露给外部控制器；它不包含模型 prompt、动作文本解析、模型词表或
+模型侧换算常数。
 
-## Status
+[English README](README_EN.md)
 
-The M1 loop is implemented and has passed a three-run acceptance on an installed
-client:
+## 功能
 
-- connection and `SessionInfo` handshake;
-- 854×480 JPEG observations at a 5 Hz target;
-- periodic state reports with actual held keys/buttons and input-lock status;
-- raw per-tick keyboard/mouse frames with received/applied/ended receipts;
-- modifier combinations such as Ctrl+Q follow the raw frame, including the
-  vanilla paths that poll the physical keyboard;
-- block and inventory queries with per-request asynchronous replies;
-- a client-settings query for sensitivity, camera type, GUI scale, game mode,
-  and the full current keybind table;
-- a unified chat/command entry (`Chat`), with no command filtering;
-- a raw-input action matrix covering movement, jump, sneak/sprint, attack, use,
-  hotbar, scroll, inventory, drop and camera in normal and minimized windows;
-- a physical input lock with ESC manual takeover;
-- minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward
-  injection while minimized;
-- continuous mining with held left-button frames, hand-mined dirt and stone,
-  in a normal window and minimized;
-- reconnect as a new session;
-- graceful host-initiated shutdown with integrated-server save.
+- **画面与状态**：以 5 Hz 目标输出 854×480 JPEG；以 10 Hz 目标报告位置、朝向、生命、
+  着地、hotbar、当前界面、输入锁和实际按住的键鼠。
+- **原始输入**：按 client tick 注入 GLFW 键码、鼠标按钮 0–7、客户区鼠标位移和滚轮；
+  支持组合键、按住状态和跨 chunk 连续动作。
+- **动作组合**：动作由原始输入组合完成。
+- **查询**：方块、背包和客户端设置；设置查询返回完整当前 keybind 表。
+- **聊天/命令**：`Chat` 统一发送一行文本，`/` 开头走原版命令路径。
+- **会话控制**：连接后锁定物理输入，ESC 可手动接管；支持断线清理、重连新 session 和
+  优雅关闭。
+- **最小化运行**：最小化窗口保持 30 FPS 渲染下限和原始输入注入，采集目标仍为 5 Hz。
 
-## Documentation
+## 文档
 
-- [Architecture](docs/architecture.md)
-- [Protocol](docs/protocol.md)
-- [M1 acceptance](docs/m1-acceptance.md)
-- [Minimized capture acceptance](docs/background-acceptance.md)
-- [Continuous mining acceptance](docs/dig-acceptance.md)
-- [Query and chat acceptance](docs/query-acceptance.md)
-- [Action matrix](docs/action-matrix.md)
-- [Same-build regression](docs/regression.md)
-- [Decisions](docs/decisions.md)
+中文文档：
 
-## Requirements
+- [中文文档索引](docs/zh/README.md)
+- [总体架构](docs/zh/architecture.md)
+- [协议](docs/zh/protocol.md)
+- [动作参考](docs/zh/actions.md)
 
-- [mise](https://mise.jdx.dev/) is used to pin the project JDK.
-- The Gradle wrapper in this repository.
-- A JDK 25 installation provided by `mise install`; `mise.toml` pins Java 25.0.5.
-- A Minecraft/NeoForge client installation for live testing.
-- A superflat test world for the M1 acceptance; the client must run in a window
-  that the mod can size to 640×360.
+英文文档：
 
-## Build and test
+- [English documentation](docs/en/README.md)
+- [英文 README](README_EN.md)
+
+## 环境要求
+
+- 通过 [mise](https://mise.jdx.dev/) 固定项目 JDK。
+- 仓库内的 Gradle wrapper。
+- 通过 `mise install` 安装 JDK 25；`mise.toml` 固定 Java 25.0.5。
+- 用于实机测试的 Minecraft/NeoForge 客户端安装。
+- 实机测试需要超平坦测试世界；客户端必须能在可设为 640×360 的窗口中运行。
+
+## 构建与测试
 
 ```powershell
 mise install
@@ -61,7 +51,7 @@ mise exec -- .\gradlew.bat test --console=plain
 mise exec -- .\gradlew.bat build --console=plain
 ```
 
-On Unix-like shells:
+类 Unix shell：
 
 ```sh
 mise install
@@ -69,88 +59,74 @@ mise exec -- ./gradlew test --console=plain
 mise exec -- ./gradlew build --console=plain
 ```
 
-The build output is `build/libs/vla-marionette.jar`. If the Gradle cache is not
-the default `~/.gradle`, set `GRADLE_USER_HOME` before building.
+构建产物是 `build/libs/vla-marionette.jar`。如果 Gradle 缓存不在默认的 `~/.gradle`，
+构建前设置 `GRADLE_USER_HOME`。
 
-## Live testing
+## 实机测试
 
-The launcher scripts use local machine paths from an ignored configuration file.
-Copy `tools/mc.local.example.ps1` to `tools/mc.local.ps1` and fill in:
+launcher 脚本从被 git 忽略的本机配置文件读取路径。复制
+`tools/mc.local.example.ps1` 为 `tools/mc.local.ps1`，填入：
 
-- the installed version directory;
-- the test world name;
-- the bridge port;
-- optionally a world source directory for an isolated copy.
+- 安装版本目录；
+- 测试世界名；
+- 桥接端口；
+- 可选的隔离副本世界源目录。
 
-The example file contains placeholders only.
+示例文件只含占位符。
 
-Typical commands:
+常用命令：
 
 ```powershell
-# Deploy the built jar to an installation (old jar is kept as .jar.disabled).
+# 把构建产物部署到安装目录；旧 jar 保留为 .jar.disabled。
 .\tools\deploy.ps1 -GameDir '<version-dir>'
 
-# Launch the installed client with a test world.
+# 用测试世界启动安装客户端。
 .\tools\launch-mc.ps1 -Installed -World vla-m1
 
-# Run the acceptance host once, or three times with automatic shutdown.
+# 运行一次测试，或三次并自动关闭。
 .\tools\m1-run.ps1 -Installed -Runs 3 -World vla-m1
 ```
 
-`launch-mc.ps1` can also create an isolated `runs/mc-*/game` copy without
-touching the installed saves. `stop-mc.ps1` validates the process id and asks the
-window to close first; forced PID termination is only a timeout fallback.
+`launch-mc.ps1` 也可以创建隔离的 `runs/mc-*/game` 副本，不触碰安装目录的存档。
+`stop-mc.ps1` 先校验进程 id 并请求窗口关闭；按 PID 强杀只是超时兜底。
 
-## Limitations
+## 限制与边界
 
-- There is no freeze, pause, or tick-rate override.
-- The HUD is never hidden.
-- While a host session is connected, physical keyboard/mouse input is suppressed
-  except ESC. Keys or buttons held before the session connects are released when
-  the lock arms, so they cannot keep acting. ESC releases injected input,
-  interrupts the current action, and allows physical input while the pause
-  screen is open; the lock re-arms when the screen closes.
-- `State.held` reports actual raw held keys/buttons; `State.input_locked` reports
-  whether physical input is currently suppressed.
-- Block and inventory queries return client-side snapshots without NBT. Responses
-  are correlated by `request_id` and may arrive out of order.
-- `Chat` sends one line; a leading `/` uses the vanilla command path. There is no
-  command filtering, and `ChatAck.ok` only means the line was dispatched, not
-  that the server executed it.
-- Minimized capture and forward injection are verified. A minimized window
-  renders at 30 FPS instead of vanilla's 10, which keeps 5 Hz capture at
-  ~4.8 Hz. Normal-window runs were observed with the client unfocused and
-  occluded by other windows; no separate cadence comparison was made.
-- Continuous mining with held left-button frames is verified for hand-mined dirt
-  and stone, in a normal window and minimized. Stone takes eight chained chunks
-  by hand. Tool-specific mining, block drops and mining multiple blocks in one
-  hold are not separately asserted. The vanilla `continueAttack` mouse-grab gate
-  was satisfied in the tested flows.
-- GUI text input, Fn/media keys, mouse buttons beyond 0–7, entity/NBT/world
-  queries, multiplayer and long soak runs are not provided.
-- There is no multi-chunk concurrency.
-- A single client tick can contain at most one press/release edge per key or
-  button; multiple edges inside one tick are not represented.
+- **设备层范围**：不实现冻结、暂停或 tick rate 覆盖；不隐藏 HUD；线上只有原始输入帧，
+  没有 `forward`/`attack`/`camera` 等语义动作字段。
+- **输入范围**：支持 GLFW 键码 32–348 和鼠标按钮 0–7；不提供 GUI 文本输入、Fn/媒体键、
+  8 号以上鼠标键。
+- **单 tick 表达**：一个 client tick 内每个键/按钮至多一个按下/松开边沿；不提供 sub-tick
+  事件流。
+- **动作调度**：同一时间一个 active + 至多一个 scheduled；没有多 chunk 并发。
+- **查询范围**：返回客户端快照，不返回 NBT/components；响应按 `request_id` 关联，
+  可能乱序；不提供实体或通用世界查询。
+- **会话行为**：连接期间物理输入被锁；连接前按住的键会在锁 arm 时释放；ESC 释放注入
+  输入并允许手动接管（暂停界面期间物理输入可用）。`ChatAck.ok` 只表示已派发，不表示
+  服务器已执行。
+- **运行环境**：最小化窗口以 30 FPS 渲染以维持 5 Hz 采集；多人服务器和长时间运行不在
+  当前范围；工具挖掘、掉落物和实体交互由 vanilla 处理，本层只注入原始输入。
 
-## Layout
+## 目录结构
 
-```
+```text
 src/main/java/com/vlamarionette/marionette/
-  protocol/       wire framing and SessionInfo
-  net/            transport, connection lifecycle, inbound routing, shutdown
-  capture/        frame grabber, JPEG encoder, latest-frame mailbox, scheduler
-  state/          client tick clock and state report
-  action/         raw frames, scheduler, receipts, vanilla input injection
-  query/          block/inventory reads and chat/command dispatch
-  mc/             window sizing
-  mixin/          render-target, focus bypass, vanilla input accessors
+  protocol/       分帧和 SessionInfo
+  net/            传输、连接生命周期、入站路由、关闭
+  capture/        帧抓取、JPEG 编码、latest-frame mailbox、调度
+  state/          client tick 时钟和状态报告
+  action/         原始帧、调度、回执、vanilla 输入注入
+  query/          方块/背包读取、聊天/命令派发
+  mc/             窗口尺寸
+  mixin/          渲染目标、焦点绕过、vanilla 输入访问器
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
-src/test/java/    pure unit tests (no game process)
-tools/            build, launcher, acceptance, and diagnostic scripts
-docs/             public protocol and acceptance documentation
+src/test/java/    纯单元测试（不启动游戏进程）
+tools/            构建、launcher、测试和诊断脚本
+docs/en/          英文技术文档
+docs/zh/          中文技术文档
 ```
 
-## License
+## 许可证
 
-MIT. See [LICENSE](LICENSE).
+MIT。见 [LICENSE](LICENSE)。

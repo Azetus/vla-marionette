@@ -135,7 +135,7 @@ The body is a JPEG. Current implementation:
 - encoded 854×480, quality 0.9;
 - wall-clock 5 Hz target;
 - a minimized window renders at 30 FPS instead of vanilla's 10
-  (`FramerateLimitTrackerMixin`); two 30 s minimized runs measured 4.83/4.85 Hz;
+  (`FramerateLimitTrackerMixin`) to keep 5 Hz capture supplied with render frames;
 - HUD is kept;
 - `state_tick` is the logical tick at sampling time;
 - `obs_id` increases per session;
@@ -367,9 +367,7 @@ Opening a GUI does not interrupt raw input.
   first real move after a grab or screen transition is not dropped.
 - Continuous mining is just held button-0 frames. Vanilla continues the attack
   only when `screen == null`, `keyAttack` is down and
-  `mouseHandler.isMouseGrabbed()`; normal-window and minimized runs broke
-  hand-mined dirt and stone (stone through eight chained chunks), so the gate was
-  satisfied and no bypass is applied.
+  `mouseHandler.isMouseGrabbed()`; the device layer does not bypass that gate.
 - GUI/world semantics are decided entirely by vanilla `Screen`/`KeyMapping`.
 
 ### 12.1 Physical input lock and ESC takeover
@@ -408,7 +406,7 @@ Opening a GUI does not interrupt raw input.
 - Disconnect/release/leave world: release keys, buttons, and pending mouse.
 - Normal client shutdown releases input on a best-effort basis.
 
-## 14. Minimal M1 sequence
+## 14. Minimal action sequence
 
 ```
 mod                          host
@@ -426,8 +424,8 @@ mod                          host
  |<--- Release ---------------|
 ```
 
-The acceptance harness asserts the action-end state, a post-action JPEG, and a
-new session after reconnect.
+The post-action state and JPEG confirm that the tick's input has landed; a
+reconnect uses a new session.
 
 ## 15. Queries and chat: common rules
 
@@ -534,9 +532,8 @@ Implementation notes:
   client chunk cache with `loadOrGenerate=false` (`chunk_not_loaded`).
   `ClientLevel.hasChunk` always returns true and cannot be used for this.
 - A crosshair query reads vanilla `Minecraft.hitResult`, which is updated once
-  per rendered frame. It is not an immediate raycast and can be up to one frame
-  stale (about 100 ms at the minimized 10 FPS). A miss or an entity hit is
-  `no_target`.
+  per rendered frame. It is not an immediate raycast and can be up to one render
+  frame stale. A miss or an entity hit is `no_target`.
 - Only the block id, properties and block-entity type are returned; no NBT.
 
 ## 17. `QueryInventory`

@@ -55,8 +55,7 @@ Minecraft main/client thread:
   with quality 0.9.
 - `CaptureStatus`: valid/reason, last observation id/tick, encoder failures.
 - A minimized window renders at 30 FPS instead of vanilla's 10
-  (`FramerateLimitTrackerMixin`). Two 30 s minimized runs measured 4.83 and
-  4.85 Hz with p95 233.8/233.7 ms; 10 FPS produced only 4.10/4.11 Hz.
+  (`FramerateLimitTrackerMixin`), keeping enough render frames for 5 Hz capture.
 
 ### `state`
 
@@ -153,9 +152,8 @@ been replaced.
   move so the first move after a grab/screen transition is not ignored, and
   flushes pending deltas at tick Post so `ended` covers the last frame's mouse.
 - Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
-  needs `mouseHandler.isMouseGrabbed()`; normal-window and minimized runs broke
-  hand-mined dirt and stone (stone through eight chained chunks), so the gate was
-  satisfied in those flows and no bypass is applied.
+  needs `mouseHandler.isMouseGrabbed()`; the device layer does not bypass that
+  gate.
 - `ended` is sent after the last frame's input and mouse flush.
 
 ## Invariants

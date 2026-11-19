@@ -216,10 +216,13 @@ Held left-button frames go through `MouseHandler.onButton` and keep
 `keyAttack.isDown()` and `mouseHandler.isMouseGrabbed()` all hold. The client
 does not bypass that gate.
 
-Three single-block runs (focused, minimized after world load, minimized before
-world load) broke a hand-mined dirt block with one 20-tick button-0 chunk. The
-block took multiple ticks to break, so `continueAttack` must have run and the
-grab gate was satisfied in all three flows.
+The host clears the inventory so the main hand is empty, then holds button 0
+through chained chunks. Initial single-block runs broke hand-mined dirt while
+focused, minimized after load, and minimized before world load. The two-block
+regression broke dirt with one 20-tick chunk and stone with eight chained chunks
+(160 ticks) while focused and while minimized. Stone cannot be harvested by hand
+and takes about 150 ticks, so `continueAttack` must have run for the whole chain
+and the grab gate was satisfied.
 
 Consequence: if a future window state leaves the mouse ungrabbed, continuous
 mining will stop even though the button is held. That should be diagnosed
@@ -231,8 +234,9 @@ These are current limitations, not decisions to keep forever:
 
 - no multi-chunk concurrency;
 - no sub-tick event stream; one held state per tick is intentional;
-- continuous mining is verified for one hand-breakable block; tool-specific
-  mining, multiple blocks and drops are not separately asserted;
+- continuous mining is verified for hand-mined dirt and stone; tool-specific
+  mining, block drops and mining multiple blocks in one hold are not separately
+  asserted;
 - no freeze is intentional and permanent for v1;
 - query/chat responses are best effort during shutdown;
 - command dispatch is not sandboxed; the host is responsible for what it sends;

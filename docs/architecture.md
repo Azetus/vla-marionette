@@ -145,9 +145,9 @@ been replaced.
 - `State.input_locked` reflects whether physical input is suppressed; `State.held`
   reports the actual raw held keys/buttons.
 - Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
-  needs `mouseHandler.isMouseGrabbed()`; three single-block runs (focused and two
-  minimized orderings) broke a dirt block, so the gate was satisfied in those
-  flows and no bypass is applied.
+  needs `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke
+  hand-mined dirt and stone (stone through eight chained chunks), so the gate was
+  satisfied in those flows and no bypass is applied.
 - `ended` is sent after the last frame's input and mouse flush.
 
 ## Invariants

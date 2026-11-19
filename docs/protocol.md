@@ -356,8 +356,9 @@ Opening a GUI does not interrupt raw input.
   they are not interpreted as GUI-specific actions.
 - Continuous mining is just held button-0 frames. Vanilla continues the attack
   only when `screen == null`, `keyAttack` is down and
-  `mouseHandler.isMouseGrabbed()`; focused and minimized single-block runs broke
-  a hand-mined dirt block, so the gate was satisfied and no bypass is applied.
+  `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke hand-mined
+  dirt and stone (stone through eight chained chunks), so the gate was satisfied
+  and no bypass is applied.
 - GUI/world semantics are decided entirely by vanilla `Screen`/`KeyMapping`.
 
 ### 12.1 Physical input lock and ESC takeover

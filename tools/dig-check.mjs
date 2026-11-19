@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 /**
- * Continuous-mining check.
+ * Continuous-mining check for one or more hand-mined blocks.
  *
- * The host places a target block in front of the player, confirms it with
- * QueryBlock, holds raw left mouse button frames through ActionChunk, and reads
- * the target again. Foreground and minimized runs use the same script; the
- * caller minimizes the window when testing the background case.
+ * For each block the host clears the player's inventory (empty main hand),
+ * places the block in front of the player, confirms it with QueryBlock, holds
+ * raw left-button frames through chained ActionChunks, and reads the target
+ * again. Chunks are scheduled back-to-back so the held button never gets a
+ * release tick; stone needs about 150 ticks by hand.
  *
  * Usage:
  *   node tools/dig-check.mjs --port 25580 --out runs/dig-check [--shutdown]
+ *   node tools/dig-check.mjs --blocks minecraft:dirt,minecraft:stone --chunks 1,8
  */
 
 import net from "node:net";
@@ -30,14 +32,22 @@ function parseTriplet(value, fallback) {
 }
 
 const port = Number(arg("port", "25580"));
-const timeoutMs = Number(arg("timeout", "120000"));
+const timeoutMs = Number(arg("timeout", "180000"));
 const outDir = path.resolve(arg("out", "runs/dig-check"));
-const block = arg("block", "minecraft:dirt");
+const blocks = arg("blocks", "minecraft:dirt,minecraft:stone")
+  .split(",").map((item) => item.trim()).filter(Boolean);
+let chunkCounts = arg("chunks", "1,8").split(",").map(Number);
+if (chunkCounts.length === 1 && blocks.length > 1) {
+  chunkCounts = blocks.map(() => chunkCounts[0]);
+}
+if (blocks.length === 0 || blocks.length !== chunkCounts.length ||
+  chunkCounts.some((count) => !Number.isInteger(count) || count < 1)) {
+  throw new Error("blocks and chunks must have the same non-empty length");
+}
 const target = parseTriplet(arg("target", "198,-59,200"), [198, -59, 200]);
 const stand = parseTriplet(arg("stand", "200.5,-60,200.5"), [200.5, -60, 200.5]);
 const yaw = Number(arg("yaw", "90"));
 const pitch = Number(arg("pitch", "0"));
-const maxChunks = Number(arg("chunks", "2"));
 const framesPerChunk = Number(arg("frames", "20"));
 const shutdown = process.argv.includes("--shutdown");
 
@@ -56,12 +66,11 @@ let seq = 1;
 let overallTimer;
 
 const receipts = [];
-const chatAcks = new Map();
 const pendingChat = new Map();
 const pendingQueries = new Map();
+const pendingInventories = new Map();
 const checks = [];
 const states = [];
-const results = [];
 let currentResult = null;
 
 const server = net.createServer((socket) => {
@@ -115,21 +124,15 @@ function handleMessage(header, body) {
       receipts.push(header);
       break;
     case "ChatAck": {
-      const id = header.request_id;
-      if (id !== null && pendingChat.has(id)) {
-        const resolve = pendingChat.get(id);
-        pendingChat.delete(id);
-        resolve(header);
-      }
+      resolvePending(pendingChat, header);
       break;
     }
     case "QueryBlockResult": {
-      const id = header.request_id;
-      if (id !== null && pendingQueries.has(id)) {
-        const resolve = pendingQueries.get(id);
-        pendingQueries.delete(id);
-        resolve(header);
-      }
+      resolvePending(pendingQueries, header);
+      break;
+    }
+    case "QueryInventoryResult": {
+      resolvePending(pendingInventories, header);
       break;
     }
     case "ShutdownAck":
@@ -138,6 +141,15 @@ function handleMessage(header, body) {
       break;
     default:
       break;
+  }
+}
+
+function resolvePending(pending, header) {
+  const id = header.request_id;
+  if (id !== null && pending.has(id)) {
+    const resolve = pending.get(id);
+    pending.delete(id);
+    resolve(header);
   }
 }
 
@@ -179,6 +191,12 @@ function queryBlock(pos) {
   return sendRequest(header, pendingQueries);
 }
 
+function queryInventory() {
+  const id = nextId();
+  return sendRequest({ type: "QueryInventory", request_id: id },
+    pendingInventories);
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -188,7 +206,7 @@ async function waitFor(predicate, label, waitMs = 20000) {
   while (Date.now() < deadline) {
     const value = predicate();
     if (value) return value;
-    await sleep(50);
+    await sleep(30);
   }
   throw new Error(`timeout waiting for ${label}`);
 }
@@ -198,27 +216,119 @@ function check(condition, label) {
   checks.push(label);
 }
 
-async function waitReceipts(startTick, chunkSeq) {
-  const ended = await waitFor(
-    () => receipts.find((receipt) => receipt.seq === chunkSeq &&
-      receipt.status === "ended" && receipt.tick === startTick + framesPerChunk),
-    "ended receipt", 15000);
-  check(receipts.some((receipt) => receipt.seq === chunkSeq &&
-    receipt.status === "received"), "received receipt");
-  check(receipts.some((receipt) => receipt.seq === chunkSeq &&
-    receipt.status === "applied" && receipt.tick === startTick), "applied receipt");
+function waitReceipt(chunkSeq, status, tick, label) {
+  return waitFor(() => receipts.find((receipt) =>
+    receipt.seq === chunkSeq && receipt.status === status &&
+    (tick === undefined || receipt.tick === tick)), label, 20000);
+}
+
+async function runBlock(block, chunks) {
+  let ack = await chat("/clear @s");
+  check(ack.ok === true && ack.kind === "command", `${block}: clear inventory accepted`);
+  await sleep(300);
+  const inventory = await queryInventory();
+  check(inventory.ok === true, `${block}: inventory query ok`);
+  const selectedEmpty = !inventory.slots.some((slot) =>
+    slot.slot === inventory.selected && slot.count > 0);
+  check(selectedEmpty, `${block}: main hand empty`);
+
+  ack = await chat(`/setblock ${target[0]} ${target[1]} ${target[2]} air`);
+  check(ack.ok === true, `${block}: clear target accepted`);
+  ack = await chat(`/setblock ${target[0]} ${target[1]} ${target[2]} ${block}`);
+  check(ack.ok === true, `${block}: place target accepted`);
+  ack = await chat(`/tp @s ${stand[0]} ${stand[1]} ${stand[2]} ${yaw} ${pitch}`);
+  check(ack.ok === true, `${block}: teleport accepted`);
+  const before = await waitFor(() => {
+    const state = lastState;
+    return state && Math.abs(state.x - stand[0]) < 0.25 &&
+      Math.abs(state.z - stand[2]) < 0.25 && Math.abs(state.yaw - yaw) < 1 &&
+      Math.abs(state.pitch - pitch) < 1 && state.on_ground === true &&
+      state.screen_open === false ? state : null;
+  }, `${block}: teleport state`);
+  await sleep(400);
+
+  const targetBefore = await queryBlock(target);
+  check(targetBefore.ok === true && targetBefore.block_state === block,
+    `${block}: target before mining (${JSON.stringify(targetBefore)})`);
+  const crosshair = await queryBlock();
+  check(crosshair.ok === true && crosshair.query === "crosshair",
+    `${block}: crosshair query ok`);
+  check(Array.isArray(crosshair.pos) && crosshair.pos[0] === target[0] &&
+    crosshair.pos[1] === target[1] && crosshair.pos[2] === target[2],
+    `${block}: crosshair sees target (${JSON.stringify(crosshair.pos)})`);
+  check(crosshair.face === "east", `${block}: crosshair face east`);
+
+  const firstStart = lastState.tick + 6;
+  const chunkInfo = [];
+  for (let index = 0; index < chunks; index++) {
+    const startTick = firstStart + index * framesPerChunk;
+    const chunkSeq = seq++;
+    sendFrame({
+      type: "ActionChunk",
+      seq: chunkSeq,
+      start_tick: startTick,
+      frames: Array.from({ length: framesPerChunk }, () => ({ buttons: [0] })),
+    });
+    const applied = await waitReceipt(chunkSeq, "applied", startTick,
+      `${block}: applied chunk ${index + 1}/${chunks}`);
+    chunkInfo.push({ seq: chunkSeq, startTick, applied: applied.tick });
+    console.log(`[dig] ${block}: chunk ${index + 1}/${chunks} applied at ${applied.tick}`);
+  }
+
+  const last = chunkInfo[chunkInfo.length - 1];
+  const ended = await waitReceipt(last.seq, "ended", last.startTick + framesPerChunk,
+    `${block}: ended last chunk`);
+  await sleep(500);
+  const targetAfter = await queryBlock(target);
+  check(targetAfter.ok === true && targetAfter.block_state === "minecraft:air",
+    `${block}: target after mining is air (${JSON.stringify(targetAfter)})`);
+
+  for (const chunk of chunkInfo) {
+    check(receipts.some((receipt) => receipt.seq === chunk.seq &&
+      receipt.status === "received"), `${block}: chunk ${chunk.seq} received`);
+    check(receipts.some((receipt) => receipt.seq === chunk.seq &&
+      receipt.status === "applied" && receipt.tick === chunk.startTick),
+      `${block}: chunk ${chunk.seq} applied at start`);
+    check(receipts.some((receipt) => receipt.seq === chunk.seq &&
+      receipt.status === "ended" &&
+      receipt.tick === chunk.startTick + framesPerChunk),
+      `${block}: chunk ${chunk.seq} ended`);
+  }
   check(!receipts.some((receipt) => receipt.status === "rejected"),
-    "no rejected receipt");
-  return ended;
+    `${block}: no rejected receipt`);
+
+  const heldDuringAction = states.find((item) =>
+    item.header.tick >= firstStart &&
+    item.header.tick < last.startTick + framesPerChunk &&
+    (item.header.held?.buttons ?? []).includes(0))?.header ?? null;
+  check(heldDuringAction !== null, `${block}: held buttons contained 0`);
+  check(before.input_locked === true, `${block}: input lock armed`);
+
+  return {
+    block,
+    chunks,
+    firstStart,
+    lastEnd: ended.tick,
+    before: compactState(before),
+    targetBefore,
+    crosshair,
+    targetAfter,
+    heldDuringAction: compactState(heldDuringAction),
+    selectedEmpty,
+    chunkInfo,
+    receiptCount: receipts.filter((receipt) =>
+      chunkInfo.some((chunk) => chunk.seq === receipt.seq)).length,
+  };
 }
 
 async function run() {
   await waitFor(() => session, "SessionInfo", 30000);
   check(session.image?.width === 854 && session.image?.height === 480,
     "image spec 854x480");
-  check((session.capabilities ?? []).includes("raw_input"), "raw_input capability");
-  check((session.capabilities ?? []).includes("query_block"), "query_block capability");
-  check((session.capabilities ?? []).includes("chat"), "chat capability");
+  for (const capability of ["raw_input", "query_block", "query_inventory", "chat"]) {
+    check((session.capabilities ?? []).includes(capability),
+      `capability ${capability}`);
+  }
 
   const stable = await waitFor(
     () => (lastState && lastState.in_world && lastState.screen_open === false &&
@@ -230,93 +340,20 @@ async function run() {
   let ack = await chat("/gamemode survival");
   check(ack.ok === true && ack.kind === "command", "gamemode survival accepted");
   await sleep(300);
-  ack = await chat(`/setblock ${target[0]} ${target[1]} ${target[2]} air`);
-  check(ack.ok === true && ack.kind === "command", "clear target accepted");
-  ack = await chat(`/setblock ${target[0]} ${target[1]} ${target[2]} ${block}`);
-  check(ack.ok === true && ack.kind === "command", "place target accepted");
-  ack = await chat(`/tp @s ${stand[0]} ${stand[1]} ${stand[2]} ${yaw} ${pitch}`);
-  check(ack.ok === true && ack.kind === "command", "teleport accepted");
 
-  const before = await waitFor(() => {
-    const state = lastState;
-    return state && Math.abs(state.x - stand[0]) < 0.25 &&
-      Math.abs(state.z - stand[2]) < 0.25 && Math.abs(state.yaw - yaw) < 1 &&
-      Math.abs(state.pitch - pitch) < 1 && state.on_ground === true &&
-      state.screen_open === false ? state : null;
-  }, "teleport state", 20000);
-  await sleep(400);
-
-  let targetBefore = await queryBlock(target);
-  check(targetBefore.ok === true && targetBefore.block_state === block,
-    `target before mining is ${block}: ${JSON.stringify(targetBefore)}`);
-  let crosshair = await queryBlock();
-  check(crosshair.ok === true && crosshair.query === "crosshair",
-    "crosshair query ok");
-  check(Array.isArray(crosshair.pos) && crosshair.pos[0] === target[0] &&
-    crosshair.pos[1] === target[1] && crosshair.pos[2] === target[2],
-    `crosshair sees target: ${JSON.stringify(crosshair.pos)}`);
-  check(crosshair.face === "east", `crosshair face east: ${crosshair.face}`);
-
-  let targetAfter = null;
-  let heldDuringAction = null;
-  let attempts = 0;
-  const result = {
-    session,
-    target,
-    stand,
-    block,
-    before: compactState(before),
-    targetBefore,
-    crosshair,
-    attempts,
-    results,
-    targetAfter,
-    heldDuringAction: null,
-    receipts,
-  };
+  const result = { session, blocks: [] };
   currentResult = result;
-
-  for (let attempt = 0; attempt < maxChunks; attempt++) {
-    attempts++;
-    const startTick = lastState.tick + 6;
-    const chunkSeq = seq++;
-    sendFrame({
-      type: "ActionChunk",
-      seq: chunkSeq,
-      start_tick: startTick,
-      frames: Array.from({ length: framesPerChunk }, () => ({ buttons: [0] })),
-    });
-    console.log(`[dig] attempt ${attempts}: left button ${framesPerChunk} ticks from ${startTick}`);
-    const ended = await waitReceipts(startTick, chunkSeq);
-    heldDuringAction = heldDuringAction ?? states.find((item) =>
-      item.header.tick >= startTick && item.header.tick < ended.tick &&
-      (item.header.held?.buttons ?? []).includes(0))?.header ?? null;
-    await sleep(400);
-    targetAfter = await queryBlock(target);
-    results.push({
-      attempt: attempts,
-      startTick,
-      endedTick: ended.tick,
-      target: targetAfter,
-    });
-    result.attempts = attempts;
-    result.targetAfter = targetAfter;
-    result.heldDuringAction = heldDuringAction ? compactState(heldDuringAction) : null;
-    if (targetAfter.ok === true && targetAfter.block_state === "minecraft:air") {
-      break;
-    }
+  for (let index = 0; index < blocks.length; index++) {
+    const blockResult = await runBlock(blocks[index], chunkCounts[index]);
+    result.blocks.push(blockResult);
+    console.log(`[dig] ${blocks[index]} passed`);
   }
 
-  check(targetAfter?.ok === true && targetAfter.block_state === "minecraft:air",
-    `target after mining is air: ${JSON.stringify(targetAfter)}`);
-  check(heldDuringAction !== null, "held buttons contained 0 during mining");
-
-  const afterFramePath = path.join(outDir, "after.jpg");
   if (lastObservation) {
-    fs.writeFileSync(afterFramePath, lastObservation.body);
+    const framePath = path.join(outDir, "after.jpg");
+    fs.writeFileSync(framePath, lastObservation.body);
+    result.afterFrame = framePath;
   }
-
-  result.afterFrame = lastObservation ? afterFramePath : null;
   return result;
 }
 
@@ -345,6 +382,7 @@ function buildReport(data) {
     shutdownRequested: shutdown,
     passed: !failedReason,
     ...(data ?? {}),
+    allReceipts: receipts,
   };
 }
 
@@ -391,4 +429,3 @@ server.listen(port, "127.0.0.1", () => {
 run()
   .then(() => finish(null))
   .catch((error) => finish(error));
-

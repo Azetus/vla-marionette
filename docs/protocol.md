@@ -354,6 +354,10 @@ Opening a GUI does not interrupt raw input.
 - Scroll: vanilla `MouseHandler.onScroll`.
 - Injected events bypass the focus check while the injection marker is active;
   they are not interpreted as GUI-specific actions.
+- Continuous mining is just held button-0 frames. Vanilla continues the attack
+  only when `screen == null`, `keyAttack` is down and
+  `mouseHandler.isMouseGrabbed()`; focused and minimized single-block runs broke
+  a hand-mined dirt block, so the gate was satisfied and no bypass is applied.
 - GUI/world semantics are decided entirely by vanilla `Screen`/`KeyMapping`.
 
 ### 12.1 Physical input lock and ESC takeover

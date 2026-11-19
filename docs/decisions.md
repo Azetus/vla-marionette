@@ -209,13 +209,30 @@ Consequence: a minimized client uses more CPU/GPU than vanilla; the 30 FPS floor
 is a deliberate trade for capture stability. 4.83 Hz is slightly below 5 Hz
 because a 30 FPS loop quantizes a 200 ms sample to 6 or 7 frames.
 
+## D20. Continuous mining uses the vanilla attack path
+
+Held left-button frames go through `MouseHandler.onButton` and keep
+`keyAttack` down. Vanilla continues an attack only when `screen == null`,
+`keyAttack.isDown()` and `mouseHandler.isMouseGrabbed()` all hold. The client
+does not bypass that gate.
+
+Three single-block runs (focused, minimized after world load, minimized before
+world load) broke a hand-mined dirt block with one 20-tick button-0 chunk. The
+block took multiple ticks to break, so `continueAttack` must have run and the
+grab gate was satisfied in all three flows.
+
+Consequence: if a future window state leaves the mouse ungrabbed, continuous
+mining will stop even though the button is held. That should be diagnosed
+against the gate rather than assumed to be an input-injection failure.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:
 
 - no multi-chunk concurrency;
 - no sub-tick event stream; one held state per tick is intentional;
-- continuous mining has an independent mouse-grab gate and is not yet verified;
+- continuous mining is verified for one hand-breakable block; tool-specific
+  mining, multiple blocks and drops are not separately asserted;
 - no freeze is intentional and permanent for v1;
 - query/chat responses are best effort during shutdown;
 - command dispatch is not sandboxed; the host is responsible for what it sends;

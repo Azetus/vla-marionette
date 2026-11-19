@@ -144,6 +144,10 @@ been replaced.
   Closing the pause screen re-arms the lock.
 - `State.input_locked` reflects whether physical input is suppressed; `State.held`
   reports the actual raw held keys/buttons.
+- Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
+  needs `mouseHandler.isMouseGrabbed()`; three single-block runs (focused and two
+  minimized orderings) broke a dirt block, so the gate was satisfied in those
+  flows and no bypass is applied.
 - `ended` is sent after the last frame's input and mouse flush.
 
 ## Invariants

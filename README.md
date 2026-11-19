@@ -21,6 +21,7 @@ client:
 - a physical input lock with ESC manual takeover;
 - minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward
   injection while minimized;
+- continuous mining with held left-button frames, focused and minimized;
 - reconnect as a new session;
 - graceful host-initiated shutdown with integrated-server save.
 
@@ -30,6 +31,7 @@ client:
 - [Protocol](docs/protocol.md)
 - [M1 acceptance](docs/m1-acceptance.md)
 - [Minimized capture acceptance](docs/background-acceptance.md)
+- [Continuous mining acceptance](docs/dig-acceptance.md)
 - [Query and chat acceptance](docs/query-acceptance.md)
 - [Decisions](docs/decisions.md)
 
@@ -109,7 +111,10 @@ window to close first; forced PID termination is only a timeout fallback.
 - Minimized capture and forward injection are verified. A minimized window
   renders at 30 FPS instead of vanilla's 10, which keeps 5 Hz capture at
   ~4.8 Hz. A visible-but-unfocused window is not separately measured.
-- Continuous mining has an independent mouse-grab gate and is not yet verified.
+- Continuous mining with held left-button frames is verified for a single
+  hand-mined dirt block, focused and minimized. Tool-specific mining, multiple
+  blocks in a row and block drops are not separately asserted. The vanilla
+  `continueAttack` mouse-grab gate was satisfied in the tested flows.
 - There is no multi-chunk concurrency.
 - A single client tick can contain at most one press/release edge per key or
   button; multiple edges inside one tick are not represented.

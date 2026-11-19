@@ -21,8 +21,9 @@ constants.
 
 - Capture: unified window/render/JPEG size, 854×480 by default; JPEG quality
   0.9. Wall-clock 5 Hz by default, with an optional per-N-client-tick mode.
-- State: 10 Hz target with position, rotation, health, ground state, hotbar,
-  screen, `input_locked`, `held`, and capture status.
+- State: 10 Hz wall-clock by default, with an optional every-N-client-tick mode;
+  includes position, rotation, health, ground state, hotbar, screen,
+  `input_locked`, `held`, and capture status.
 - Input: per-tick GLFW key codes, mouse buttons 0–7, client-area pixel movement,
   and scroll.
 - Queries: `QueryBlock`, `QueryInventory`, `QuerySettings`; the settings query

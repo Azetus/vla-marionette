@@ -7,6 +7,8 @@ import com.vlamarionette.marionette.capture.CaptureMode;
 import com.vlamarionette.marionette.mc.FovConfig;
 import com.vlamarionette.marionette.mc.FovMode;
 import com.vlamarionette.marionette.net.BridgeConfig;
+import com.vlamarionette.marionette.state.StateConfig;
+import com.vlamarionette.marionette.state.StateMode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,10 +19,11 @@ import org.slf4j.LoggerFactory;
  * Loads the client TOML configuration.
  *
  * <p>The file is read once at startup. The server host/port, capture size,
- * capture mode and FOV are startup settings; a running client must be restarted
- * after changing them.
+ * capture mode, state cadence and FOV are startup settings; a running client
+ * must be restarted after changing them.
  */
-public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fov) {
+public record VlaConfig(BridgeConfig bridge, CaptureConfig capture,
+        StateConfig state, FovConfig fov) {
 
     public static final String FILE_NAME = "vla_marionette-client.toml";
 
@@ -40,6 +43,12 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
             mode = "wall_clock"
             hz = 5.0
             tick_interval = 4
+
+            [state]
+            # wall_clock: report at hz; tick: every tick_interval client ticks.
+            mode = "wall_clock"
+            hz = 10.0
+            tick_interval = 1
 
             [fov]
             # fixed: force the world projection to `vertical` degrees (30-110).
@@ -62,6 +71,7 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
 
         BridgeConfig bridge = defaultBridge();
         CaptureConfig capture = defaultCapture();
+        StateConfig state = defaultState();
         FovConfig fov = defaultFov();
 
         FileConfig toml = FileConfig.of(file, TomlFormat.instance());
@@ -78,6 +88,11 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
                 LOG.warn("[vla] invalid capture config in {}, using defaults", file, e);
             }
             try {
+                state = readState(toml);
+            } catch (RuntimeException e) {
+                LOG.warn("[vla] invalid state config in {}, using defaults", file, e);
+            }
+            try {
                 fov = readFov(toml);
             } catch (RuntimeException e) {
                 LOG.warn("[vla] invalid fov config in {}, using defaults", file, e);
@@ -90,7 +105,7 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
 
         bridge = applySystemOverrides(bridge);
         fov = applyFovSystemOverrides(fov);
-        return new VlaConfig(bridge, capture, fov);
+        return new VlaConfig(bridge, capture, state, fov);
     }
 
     private static BridgeConfig readBridge(FileConfig toml) {
@@ -113,6 +128,51 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
         double hz = hzValue == null ? 5.0 : hzValue.doubleValue();
         int tickInterval = toml.getOrElse("capture.tick_interval", 4);
         return new CaptureConfig(width, height, mode, hz, tickInterval);
+    }
+
+    /** Reads the independent {@code [state]} section. */
+    private static StateConfig readState(FileConfig toml) {
+        Object rawMode = toml.get("state.mode");
+        Object rawHz = toml.get("state.hz");
+        Object rawTick = toml.get("state.tick_interval");
+        if (rawMode == null && rawHz == null && rawTick == null) {
+            return StateConfig.DEFAULT;
+        }
+        StateMode mode = rawMode instanceof String modeValue
+                ? StateMode.parse(modeValue, null)
+                : null;
+        if (mode == null) {
+            LOG.warn("[vla] unknown state.mode, using defaults");
+            return StateConfig.DEFAULT;
+        }
+        double hz = StateConfig.DEFAULT_HZ;
+        if (rawHz != null) {
+            if (!(rawHz instanceof Number number)) {
+                LOG.warn("[vla] state.hz is not a number, using defaults");
+                return StateConfig.DEFAULT;
+            }
+            hz = number.doubleValue();
+        }
+        int tickInterval = StateConfig.DEFAULT_TICK_INTERVAL;
+        if (rawTick != null) {
+            if (!(rawTick instanceof Number number)) {
+                LOG.warn("[vla] state.tick_interval is not a number, using defaults");
+                return StateConfig.DEFAULT;
+            }
+            double value = number.doubleValue();
+            if (!Double.isFinite(value) || value != Math.rint(value)
+                    || value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+                LOG.warn("[vla] state.tick_interval is not an integer, using defaults");
+                return StateConfig.DEFAULT;
+            }
+            tickInterval = (int) value;
+        }
+        try {
+            return new StateConfig(mode, hz, tickInterval);
+        } catch (RuntimeException e) {
+            LOG.warn("[vla] invalid state config, using defaults", e);
+            return StateConfig.DEFAULT;
+        }
     }
 
     /**
@@ -209,6 +269,10 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fo
 
     private static CaptureConfig defaultCapture() {
         return new CaptureConfig(854, 480, CaptureMode.WALL_CLOCK, 5.0, 4);
+    }
+
+    private static StateConfig defaultState() {
+        return StateConfig.DEFAULT;
     }
 
     private static FovConfig defaultFov() {

@@ -39,10 +39,13 @@ Minecraft main/client thread:
 ### `config`
 
 - `VlaConfig`: reads `config/vla_marionette-client.toml` at startup and exposes
-  bridge, capture and FOV settings; it writes defaults if missing and falls back
-  with a log on invalid values.
+  bridge, capture, state and FOV settings; it writes defaults if missing and
+  falls back with a log on invalid values.
 - `CaptureConfig` / `CaptureMode`: unified size, `wall_clock` or `tick` mode,
   wall-clock Hz and tick interval.
+- `StateConfig` / `StateMode`: State `wall_clock` (`hz`) or `tick`
+  (`tick_interval`) pacing; validated independently, so an invalid state section
+  never resets capture or FOV.
 - `FovConfig` / `FovMode`: startup FOV mode (`fixed`/`vanilla`) and vertical FOV;
   validated independently from the capture section, so an invalid FOV never
   resets the capture size.
@@ -73,8 +76,11 @@ Minecraft main/client thread:
 
 - `ClientClock`: the single logical client-tick counter, incremented at
   `ClientTickEvent.Pre`.
-- `StateReporter`: wall-clock-throttled 10 Hz report driven by both client ticks
-  and render frames. It reports even when no world/player exists.
+- `StateReporter`: two modes. `wall_clock` is driven by client ticks and render
+  frames, throttled by `hz` and kept alive by rendering; `tick` samples only at
+  `ClientTickEvent.Post`, after the action scheduler and mouse flush, once every
+  `tick_interval` ticks. `tick` is exact and is not backfilled. It reports even
+  when no world/player exists.
 
 ### `action`
 
@@ -191,7 +197,8 @@ been replaced.
   no `options.txt` write.
 - Render target/window/JPEG use the unified size, 854×480 by default; quality
   0.9.
-- 5 Hz capture target; 10 Hz state target; 20 TPS logical client tick target.
+- 5 Hz capture target; State defaults to a 10 Hz wall-clock target with an
+  optional every-N-client-tick mode; 20 TPS logical client tick target.
 - Minimized render floor 30 FPS (Minecraft's 10) so capture keeps 6 frames per 200 ms
   sample.
 - One active + at most one scheduled action.

@@ -5,57 +5,92 @@ import com.vlamarionette.marionette.action.McInputInjector;
 import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureStatus;
 import com.vlamarionette.marionette.net.Transport;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 /**
  * Sends the periodic {@code State} report.
  *
- * <p>Driven by both client ticks and render frames with one wall-clock throttle:
- * client ticks provide a stable 10 Hz cadence even when the window renders
- * slowly, while render frames keep the report alive if ticks are stalled. The
- * state is sent even when no world/player exists.
+ * <p>Two pacing modes are supported:
+ *
+ * <ul>
+ *   <li>{@code wall_clock}: driven by client ticks and render frames with one
+ *       wall-clock throttle. Ticks provide a stable real-time cadence; render
+ *       frames keep the report alive if ticks stall. This is the default and
+ *       preserves the historical 10 Hz behavior.</li>
+ *   <li>{@code tick}: called only from {@code ClientTickEvent.Post}, after the
+ *       action scheduler and mouse flush, once every N client ticks. The
+ *       {@code tick} field is the just-completed tick, so action ends are exact.
+ *       There is no render fallback and no backfill.</li>
+ * </ul>
+ *
+ * <p>The state is sent even when no world/player exists. Sampling on the tick
+ * path is explicit from {@code MarionetteMod} so it is always ordered after the
+ * action scheduler's mouse flush.
  */
 public final class StateReporter {
-
-    private static final long INTERVAL_MS = 100L;
 
     private final Transport transport;
     private final CaptureScheduler captureScheduler;
     private final McInputInjector inputInjector;
+    private final StateConfig config;
 
-    private long lastSentMs;
+    private long lastSentNanos;
+    private long lastReportedTick = Long.MIN_VALUE;
 
     public StateReporter(Transport transport, CaptureScheduler captureScheduler,
-            McInputInjector inputInjector) {
-        this.transport = transport;
-        this.captureScheduler = captureScheduler;
-        this.inputInjector = inputInjector;
+            McInputInjector inputInjector, StateConfig config) {
+        this.transport = Objects.requireNonNull(transport, "transport");
+        this.captureScheduler = Objects.requireNonNull(captureScheduler, "captureScheduler");
+        this.inputInjector = Objects.requireNonNull(inputInjector, "inputInjector");
+        this.config = Objects.requireNonNull(config, "config");
     }
 
-    public void onClientTick(ClientTickEvent.Post event) {
-        report();
+    /**
+     * Client-tick Post path. Must run after the action scheduler's Post step so
+     * the final mouse delta is included in the pose.
+     */
+    public void onClientTickPost(long tick) {
+        long now = System.nanoTime();
+        if (config.tickMode()) {
+            if (tick % config.tickInterval() != 0) {
+                return;
+            }
+            report(tick, now);
+            return;
+        }
+        reportWallClock(tick, now);
     }
 
     public void onRenderFrame(RenderFrameEvent.Post event) {
-        report();
-    }
-
-    private void report() {
-        long now = System.currentTimeMillis();
-        if (now - lastSentMs < INTERVAL_MS) {
+        if (config.tickMode()) {
             return;
         }
+        reportWallClock(ClientClock.tick(), System.nanoTime());
+    }
+
+    private void reportWallClock(long tick, long now) {
+        if (now - lastSentNanos < config.wallClockIntervalNanos()) {
+            return;
+        }
+        report(tick, now);
+    }
+
+    private void report(long tick, long now) {
         String sessionId = transport.sessionId();
         if (sessionId == null) {
             return;
         }
-        lastSentMs = now;
+        if (tick == lastReportedTick) {
+            return;
+        }
+        lastReportedTick = tick;
+        lastSentNanos = now;
 
         Minecraft mc = Minecraft.getInstance();
         ClientLevel level = mc.level;
@@ -95,7 +130,7 @@ public final class StateReporter {
         heldButtons.addAll(InputLock.physicalButtons());
 
         StateSnapshot snapshot = new StateSnapshot(
-                ClientClock.tick(),
+                tick,
                 gameTime,
                 inWorld,
                 dimension,

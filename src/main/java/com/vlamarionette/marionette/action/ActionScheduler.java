@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.LongConsumer;
 
 /**
  * Pure tick-level action state machine.
@@ -18,6 +19,8 @@ public final class ActionScheduler {
     private final InputSink input;
     private final Consumer<JsonObject> receipts;
     private final Set<Integer> acceptedSeq = new HashSet<>();
+    private volatile LongConsumer beforeEnded = tick -> {
+    };
 
     private ActionChunk active;
     private ActionChunk scheduled;
@@ -25,6 +28,15 @@ public final class ActionScheduler {
     public ActionScheduler(InputSink input, Consumer<JsonObject> receipts) {
         this.input = input;
         this.receipts = receipts;
+    }
+
+    /**
+     * Called on the final tick after the mouse flush and before the {@code ended}
+     * receipt. Used to capture the exact end-of-action state.
+     */
+    public void setBeforeEnded(LongConsumer handler) {
+        beforeEnded = handler != null ? handler : tick -> {
+        };
     }
 
     public synchronized SubmitResult submit(ActionChunk chunk, long currentTick) {
@@ -70,6 +82,7 @@ public final class ActionScheduler {
         if (active != null) {
             input.flushMouse();
             if (tick + 1 >= active.endTickExclusive()) {
+                beforeEnded.accept(tick);
                 receipts.accept(ActionReceipt.ended(active.seq(), tick + 1));
                 active = null;
             }

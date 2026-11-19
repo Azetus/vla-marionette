@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.vlamarionette.marionette.capture.CaptureMode;
 import com.vlamarionette.marionette.mc.FovMode;
+import com.vlamarionette.marionette.state.StateMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
@@ -24,6 +25,9 @@ class VlaConfigTest {
         assertEquals(CaptureMode.WALL_CLOCK, config.capture().mode());
         assertEquals(5.0, config.capture().wallClockHz());
         assertEquals(4, config.capture().tickInterval());
+        assertEquals(StateMode.WALL_CLOCK, config.state().mode());
+        assertEquals(10.0, config.state().wallClockHz());
+        assertEquals(1, config.state().tickInterval());
         assertEquals(FovMode.FIXED, config.fov().mode());
         assertEquals(70.0, config.fov().vertical());
     }
@@ -43,6 +47,11 @@ class VlaConfigTest {
                 hz = 10.0
                 tick_interval = 2
 
+                [state]
+                mode = "tick"
+                hz = 5.0
+                tick_interval = 2
+
                 [fov]
                 mode = "fixed"
                 vertical = 90
@@ -57,6 +66,9 @@ class VlaConfigTest {
         assertEquals(CaptureMode.TICK_INTERVAL, config.capture().mode());
         assertEquals(10.0, config.capture().wallClockHz());
         assertEquals(2, config.capture().tickInterval());
+        assertEquals(StateMode.TICK_INTERVAL, config.state().mode());
+        assertEquals(5.0, config.state().wallClockHz());
+        assertEquals(2, config.state().tickInterval());
         assertEquals(FovMode.FIXED, config.fov().mode());
         assertEquals(90.0, config.fov().vertical());
     }
@@ -73,8 +85,46 @@ class VlaConfigTest {
 
         assertEquals(640, config.capture().width());
         assertEquals(360, config.capture().height());
+        assertEquals(StateMode.WALL_CLOCK, config.state().mode());
+        assertEquals(10.0, config.state().wallClockHz());
+        assertEquals(1, config.state().tickInterval());
         assertEquals(FovMode.FIXED, config.fov().mode());
         assertEquals(70.0, config.fov().vertical());
+    }
+
+    @Test
+    void invalidStateFallsBackToDefaultWithoutResettingOtherSections(@TempDir Path temp)
+            throws Exception {
+        Files.writeString(temp.resolve(VlaConfig.FILE_NAME), """
+                [capture]
+                width = 640
+                height = 360
+                mode = "tick"
+                hz = 6.0
+                tick_interval = 3
+
+                [state]
+                mode = "tick"
+                hz = 20.0
+                tick_interval = 0
+
+                [fov]
+                mode = "fixed"
+                vertical = 30
+                """);
+
+        VlaConfig config = VlaConfig.load(temp);
+
+        assertEquals(640, config.capture().width());
+        assertEquals(360, config.capture().height());
+        assertEquals(CaptureMode.TICK_INTERVAL, config.capture().mode());
+        assertEquals(6.0, config.capture().wallClockHz());
+        assertEquals(3, config.capture().tickInterval());
+        assertEquals(StateMode.WALL_CLOCK, config.state().mode());
+        assertEquals(10.0, config.state().wallClockHz());
+        assertEquals(1, config.state().tickInterval());
+        assertEquals(FovMode.FIXED, config.fov().mode());
+        assertEquals(30.0, config.fov().vertical());
     }
 
     @Test

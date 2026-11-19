@@ -146,8 +146,25 @@ The body is a JPEG. Current implementation:
 
 ## 5. `State`
 
-Sent at a wall-clock 10 Hz target, driven by client ticks and render frames. It
-is sent even when no world/player exists.
+Defaults to `wall_clock` at 10 Hz, driven by client ticks and render frames; it
+can be configured to `tick` mode. It is sent even when no world/player exists.
+
+```toml
+[state]
+mode = "wall_clock"   # wall_clock | tick
+hz = 10.0             # wall_clock mode
+tick_interval = 1     # tick mode
+```
+
+- `wall_clock` throttles by `hz` in real time; it does not catch up or backfill,
+  and render frames keep it alive if ticks stall.
+- `tick` samples only at `ClientTickEvent.Post`, once every `tick_interval`
+  client ticks. `tick` is the just-completed tick, so action ends are exact; it
+  does not depend on render frames and does not backfill missed ticks.
+- Neither mode changes the State fields. The default is `wall_clock` 10 Hz;
+  changing the setting requires a client restart.
+- In `tick` mode, the State for an action-end tick is queued before the `ended`
+  receipt, so the host can align it with `state.tick == ended.tick - 1`.
 
 ```json
 {
@@ -182,7 +199,7 @@ is sent even when no world/player exists.
 
 | Field | Meaning |
 |---|---|
-| `tick` | logical client tick |
+| `tick` | logical client tick; in `tick` mode, the just-completed tick |
 | `game_time` | level game time; null outside a world |
 | `in_world` | level is present |
 | `dimension` | dimension id; null outside a world |

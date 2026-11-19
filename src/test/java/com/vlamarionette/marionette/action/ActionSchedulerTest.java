@@ -58,6 +58,25 @@ class ActionSchedulerTest {
     }
 
     @Test
+    void reportsBeforeEndedAfterFlush() {
+        RecordingSink localSink = new RecordingSink();
+        List<String> order = new ArrayList<>();
+        ActionScheduler local = new ActionScheduler(localSink,
+                receipt -> order.add("receipt:" + status(receipt)));
+        local.setBeforeEnded(tick -> order.add("state:" + tick));
+
+        assertTrue(local.submit(chunk(1, 10, ActionFrame.EMPTY, ActionFrame.EMPTY), 5).accepted());
+        local.onPre(10);
+        local.onPost(10);
+        local.onPre(11);
+        local.onPost(11);
+
+        assertEquals(List.of("receipt:received", "receipt:applied",
+                "state:11", "receipt:ended"), order);
+        assertEquals(2, localSink.flushes);
+    }
+
+    @Test
     void rejectsLateBusyAndDuplicateWithoutConsumingSeq() {
         assertEquals("late", scheduler.submit(chunk(1, 10, ActionFrame.EMPTY), 10).reason());
 

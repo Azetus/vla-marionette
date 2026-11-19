@@ -36,10 +36,12 @@ Minecraft 主/客户端线程：
 
 ### `config`
 
-- `VlaConfig`：启动时读取 `config/vla_marionette-client.toml`，提供 bridge、capture
-  和 fov 三组设置；缺失文件时写默认值，非法值记录日志并回退。
+- `VlaConfig`：启动时读取 `config/vla_marionette-client.toml`，提供 bridge、capture、
+  state 和 fov 四组设置；缺失文件时写默认值，非法值记录日志并回退。
 - `CaptureConfig` / `CaptureMode`：统一尺寸、`wall_clock` 或 `tick` 模式、墙钟频率和
   tick 间隔。
+- `StateConfig` / `StateMode`：State 的 `wall_clock`（`hz`）或 `tick`
+  （`tick_interval`）模式；独立校验，非法 state 配置不会重置 capture/fov。
 - `FovConfig` / `FovMode`：启动 FOV 模式（`fixed`/`vanilla`）和垂直 FOV；独立于
   capture 段校验，非法 FOV 不会重置尺寸。
 
@@ -64,8 +66,9 @@ Minecraft 主/客户端线程：
 ### `state`
 
 - `ClientClock`：唯一的逻辑 client tick 计数器，在 `ClientTickEvent.Pre` 递增。
-- `StateReporter`：按真实时间限制在 10 Hz，由 client tick 和渲染帧共同驱动；即使
-  没有世界/玩家也发送状态。
+- `StateReporter`：两种模式。`wall_clock` 由 client tick 和渲染帧共同驱动，按 `hz`
+  节流并保活；`tick` 只在 `ClientTickEvent.Post`、动作调度和鼠标 flush 之后采样，
+  每 `tick_interval` 个 tick 一条，`tick` 精确且不补采。没有世界/玩家时也发送状态。
 
 ### `action`
 
@@ -160,7 +163,7 @@ Minecraft 主/客户端线程：
 - FOV 从启动配置读取；`fixed` 模式固定世界投影，`vanilla` 模式保留原版行为；
   没有运行时 FOV 控制消息，也不写 `options.txt`。
 - 渲染目标/窗口/JPEG 尺寸统一，默认 854×480；质量 0.9。
-- 采集目标 5 Hz；状态目标 10 Hz；逻辑 client tick 目标 20 TPS。
+- 采集目标 5 Hz；状态默认 10 Hz 墙钟，可配置为每 N 个 client tick；逻辑 client tick 目标 20 TPS。
 - 最小化渲染下限 30 FPS（Minecraft 原版的 10），让 200 ms 采样有 6 帧余量。
 - 同一时间一个 active，至多一个 scheduled。
 - 查询/聊天响应按 `request_id` 关联，不保证顺序，不泄漏到新 session。

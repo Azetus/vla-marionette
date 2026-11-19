@@ -134,7 +134,21 @@ body 是 JPEG。当前实现：
 
 ## 5. `State`
 
-目标 10 Hz（墙钟），由 client tick 和渲染帧驱动；没有世界/玩家时也发送。
+默认 `wall_clock` 10 Hz，由 client tick 和渲染帧驱动；可配置为 `tick` 模式。没有世界/玩家时也发送。
+
+```toml
+[state]
+mode = "wall_clock"   # wall_clock | tick
+hz = 10.0             # wall_clock 模式
+tick_interval = 1     # tick 模式
+```
+
+- `wall_clock`：按真实时间用 `hz` 节流；不追帧、不补采；tick 停顿时仍可由渲染回调保活。
+- `tick`：只在 `ClientTickEvent.Post` 采样；每 `tick_interval` 个 client tick 一条；`tick` 是
+  刚完成的 tick，动作末端精确；不依赖渲染帧，错过的 tick 不补采。
+- 两种模式都不改变 State 字段。默认 `wall_clock` 10 Hz；修改后重启客户端。
+- `tick` 模式下，动作结束 tick 的 State 在 `ended` 回执之前入队，host 可直接用
+  `state.tick == ended.tick - 1` 对齐末端位姿。
 
 ```json
 {
@@ -159,7 +173,7 @@ body 是 JPEG。当前实现：
 
 | 字段 | 含义 |
 |---|---|
-| `tick` | 逻辑 client tick |
+| `tick` | 逻辑 client tick；`tick` 模式下是刚完成的 tick |
 | `game_time` | 关卡游戏时间；无世界时 null |
 | `in_world` | 是否有 level |
 | `dimension` | 维度 id；无世界时 null |

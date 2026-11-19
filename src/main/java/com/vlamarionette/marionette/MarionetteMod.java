@@ -95,14 +95,15 @@ public final class MarionetteMod {
         frameMailbox = new FrameMailbox(transport::offerFrame, CaptureSpec.JPEG_QUALITY);
         frameMailbox.start();
         captureScheduler = new CaptureScheduler(transport, frameMailbox);
-        stateReporter = new StateReporter(transport, captureScheduler, inputInjector);
+        stateReporter = new StateReporter(transport, captureScheduler, inputInjector,
+                config.state());
+        actionScheduler.setBeforeEnded(stateReporter::onClientTickPost);
 
         NeoForge.EVENT_BUS.addListener(ClientClock::onClientTick);
         NeoForge.EVENT_BUS.addListener(this::onClientTickPre);
         NeoForge.EVENT_BUS.addListener(this::onClientTickPost);
         NeoForge.EVENT_BUS.addListener(WindowLayout::onClientTick);
         NeoForge.EVENT_BUS.addListener(captureScheduler::onRenderFrame);
-        NeoForge.EVENT_BUS.addListener(stateReporter::onClientTick);
         NeoForge.EVENT_BUS.addListener(stateReporter::onRenderFrame);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -136,6 +137,10 @@ public final class MarionetteMod {
     }
 
     private void onClientTickPost(ClientTickEvent.Post event) {
-        actionScheduler.onPost(ClientClock.tick());
+        long tick = ClientClock.tick();
+        actionScheduler.onPost(tick);
+        // Sample after the action scheduler flushed the final mouse delta so a
+        // tick-paced State is the exact end-of-tick pose.
+        stateReporter.onClientTickPost(tick);
     }
 }

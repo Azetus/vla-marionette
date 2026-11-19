@@ -23,6 +23,7 @@ before running them.
 | `m1-acceptance.mjs` | M1: handshake, JPEG, one W chunk, receipts, post-action frame and state. |
 | `query-check.mjs` | QueryBlock, QueryInventory, QuerySettings/FOV and Chat checks. |
 | `fov-check.mjs` | FOV settings, frame capture, sprint and optional spyglass checks. |
+| `state-check.mjs` | State pacing: tick-mode action-tick/end coverage or wall-clock rate. |
 | `matrix-check.mjs` | Action matrix; foreground or `--minimized`. |
 | `background-check.mjs` | Minimized 30 s capture cadence and forward. |
 | `dig-check.mjs` | Continuous dirt/stone mining with chained chunks. |

@@ -10,8 +10,9 @@ VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tic
 
 ## 功能
 
-- **画面与状态**：默认以 5 Hz 目标输出 854×480 JPEG；以 10 Hz 目标报告位置、朝向、生命、
-  着地、hotbar、当前界面、输入锁和实际按住的键鼠。
+- **画面与状态**：默认以 5 Hz 目标输出 854×480 JPEG；状态默认以 10 Hz 墙钟目标报告，
+  也可配置为每 N 个 client tick 采样；报告位置、朝向、生命、着地、hotbar、当前界面、
+  输入锁和实际按住的键鼠。
 - **原始输入**：按 client tick 注入 GLFW 键码、鼠标按钮 0–7、客户区鼠标位移和滚轮；
   支持组合键、按住状态和跨 chunk 连续动作。
 - **动作组合**：动作由原始输入组合完成。
@@ -77,6 +78,11 @@ mode = "wall_clock"   # wall_clock | tick
 hz = 5.0
 tick_interval = 4
 
+[state]
+mode = "wall_clock"   # wall_clock | tick
+hz = 10.0             # wall_clock 模式使用
+tick_interval = 1     # tick 模式使用
+
 [fov]
 mode = "fixed"        # fixed | vanilla
 vertical = 70         # 30-110, vertical degrees
@@ -84,7 +90,9 @@ vertical = 70         # 30-110, vertical degrees
 
 - `width/height` 同时决定窗口、渲染目标和 JPEG 输出尺寸，三者一致，不做缩放。
 - `wall_clock` 按真实时间采样；`tick` 在每 N 个 client tick 后的第一个渲染帧采样。
-- 端口、尺寸、采集模式和 FOV 的修改在重启客户端后生效；运行中的桥接不会重读配置。
+- 端口、尺寸、采集模式、状态采样和 FOV 的修改在重启客户端后生效；运行中的桥接不会重读配置。
+- `[state]` 的 `wall_clock` 用 `hz` 按真实时间节流；`tick` 每 `tick_interval` 个 client tick
+  在 tick Post 采样一条，`tick` 精确，适合动作边界/末端位姿；默认 `wall_clock` 10 Hz。
 - `[fov]` 的 `vertical` 是垂直 FOV（与 Minecraft 自身的 FOV 设置一致，MC 的水平 FOV
   由宽高比派生）。`fixed` 固定世界投影，`vanilla` 保留客户端原版行为。
 - HUD 不在 TOML 中配置；host 用 `SetHud` 控制，Minecraft 原版的 F1 键

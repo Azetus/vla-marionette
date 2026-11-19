@@ -18,8 +18,8 @@ prompt、动作文本解析、模型词表或模型侧换算常数。
 
 - 采集：窗口、渲染目标和 JPEG 输出使用统一尺寸，默认 854×480；JPEG 质量 0.9。
   默认墙钟 5 Hz，也可按每 N 个 client tick 采样。
-- 状态：目标 10 Hz，包含位置、朝向、生命、着地、hotbar、screen、
-  `input_locked`、`held` 和采集状态。
+- 状态：默认 10 Hz 墙钟，也可配置为每 N 个 client tick 采样；包含位置、朝向、生命、
+  着地、hotbar、screen、`input_locked`、`held` 和采集状态。
 - 输入：逐 client tick 的 GLFW 键码、鼠标按钮 0–7、客户区像素位移和滚轮。
 - 查询：`QueryBlock`、`QueryInventory`、`QuerySettings`；设置查询包含完整当前
   keybind 表和当前 `hide_gui`。

@@ -11,9 +11,10 @@ parsing, model vocabulary, or model-side conversion constants.
 
 ## Features
 
-- **Capture and state**: 854×480 JPEG at a 5 Hz default; 10 Hz state with
-  position, rotation, health, ground state, hotbar, current screen, input-lock
-  status, and the actual held keys/buttons.
+- **Capture and state**: 854×480 JPEG at a 5 Hz default; State defaults to a
+  10 Hz wall-clock target with an optional tick-paced mode. It reports position,
+  rotation, health, ground state, hotbar, current screen, input-lock status, and
+  the actual held keys/buttons.
 - **Raw input**: per-tick GLFW key codes, mouse buttons 0–7, client-area mouse
   movement, and scroll; key combinations, held state, and actions continued
   across chunks are supported.
@@ -87,6 +88,11 @@ mode = "wall_clock"   # wall_clock | tick
 hz = 5.0
 tick_interval = 4
 
+[state]
+mode = "wall_clock"   # wall_clock | tick
+hz = 10.0             # wall_clock mode
+tick_interval = 1     # tick mode
+
 [fov]
 mode = "fixed"        # fixed | vanilla
 vertical = 70         # 30-110, vertical degrees
@@ -96,8 +102,11 @@ vertical = 70         # 30-110, vertical degrees
   three are equal and no scaling is performed.
 - `wall_clock` samples by real time; `tick` samples on the first render frame
   after every N client ticks.
-- Port, size, capture-mode and FOV changes apply after a client restart; a
-  running bridge does not reread the file.
+- Port, size, capture-mode, state-pacing and FOV changes apply after a client
+  restart; a running bridge does not reread the file.
+- `[state]` `wall_clock` throttles by `hz` in real time; `tick` samples once every
+  `tick_interval` client ticks at tick Post, making `tick` exact for action
+  boundaries and end poses. The default is `wall_clock` 10 Hz.
 - `[fov].vertical` is the vertical FOV, matching Minecraft's own FOV setting;
   Minecraft derives the horizontal FOV from the aspect ratio. `fixed` pins the
   world projection; `vanilla` keeps the client's own behavior.

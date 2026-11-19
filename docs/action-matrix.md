@@ -93,8 +93,8 @@ the deltas.
 - Normal-window runs were observed with the client unfocused and occluded by
   other application windows; the functional checks passed. A separate cadence
   comparison for that condition was not made.
-- The minimized subset covers forward, jump, attack, use, camera and hotbar;
-  minimized capture itself is covered by
+- The minimized subset covers forward, jump, attack, use, camera, hotbar/scroll,
+  and inventory open/close; minimized capture itself is covered by
   [background-acceptance.md](background-acceptance.md).
 
 ## Non-goals

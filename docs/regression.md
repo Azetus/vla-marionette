@@ -52,7 +52,7 @@ Capture: 30 s, 145 observations, 4.82 Hz, p50 200.9 ms, p95 233.8 ms, maximum
 moved 1.157 blocks with direction dot 1.000 and dy 0.
 
 Continuous mining: dirt one chunk and stone eight chained chunks, both to
-`minecraft:air`, with the same receipt and held-button evidence as the focused
+`minecraft:air`, with the same receipt and held-button evidence as the normal-window
 run.
 
 `Shutdown(save=true)` saved the integrated server and the client exited.

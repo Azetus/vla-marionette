@@ -197,7 +197,7 @@ that misses its frame slips to 300 ms. Two 30 s measurements produced 119 and
 123 observations (4.10 and 4.11 Hz), with p95 300 ms, below the 4.5 Hz gate.
 
 The client raises only the `WINDOW_ICONIFIED` limit from 10 to 30 FPS through
-`FramerateLimitTrackerMixin`. Normal focused rendering, AFK limits,
+`FramerateLimitTrackerMixin`. Normal-window rendering, AFK limits,
 out-of-level menus and every other throttle reason are unchanged.
 
 Two post-change runs produced 145 observations each (4.83 and 4.85 Hz), p95
@@ -217,10 +217,10 @@ Held left-button frames go through `MouseHandler.onButton` and keep
 does not bypass that gate.
 
 The host clears the inventory so the main hand is empty, then holds button 0
-through chained chunks. Initial single-block runs broke hand-mined dirt while
-focused, minimized after load, and minimized before world load. The two-block
+through chained chunks. Initial single-block runs broke hand-mined dirt in a
+normal window, minimized after load, and minimized before world load. The two-block
 regression broke dirt with one 20-tick chunk and stone with eight chained chunks
-(160 ticks) while focused and while minimized. Stone cannot be harvested by hand
+(160 ticks) in a normal window and while minimized. Stone cannot be harvested by hand
 and takes about 150 ticks, so `continueAttack` must have run for the whole chain
 and the grab gate was satisfied.
 

@@ -36,6 +36,7 @@ public final class InboundRouter {
             case "Shutdown" -> ShutdownHandler.handle(transport, message);
             case "QueryBlock" -> queries.handleBlock(message);
             case "QueryInventory" -> queries.handleInventory(message);
+            case "QuerySettings" -> queries.handleSettings(message);
             case "Chat" -> queries.handleChat(message);
             case "Release" -> {
                 Minecraft mc = Minecraft.getInstance();

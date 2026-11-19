@@ -42,6 +42,11 @@ public final class QueryRequests {
         return new InventoryQuery(requestId(message));
     }
 
+    public static SettingsQuery parseSettings(JsonObject message) throws QueryRequestException {
+        Objects.requireNonNull(message, "message");
+        return new SettingsQuery(requestId(message));
+    }
+
     static int requestId(JsonObject message) throws QueryRequestException {
         JsonElement element = message.get("request_id");
         if (element == null || !element.isJsonPrimitive()
@@ -83,5 +88,8 @@ public final class QueryRequests {
     }
 
     public record InventoryQuery(int requestId) {
+    }
+
+    public record SettingsQuery(int requestId) {
     }
 }

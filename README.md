@@ -19,6 +19,7 @@ client:
 - modifier combinations such as Ctrl+Q follow the raw frame, including the
   vanilla paths that poll the physical keyboard;
 - block and inventory queries with per-request asynchronous replies;
+- a client-settings query for sensitivity, camera type, GUI scale and game mode;
 - a unified chat/command entry (`Chat`), with no command filtering;
 - a physical input lock with ESC manual takeover;
 - minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward

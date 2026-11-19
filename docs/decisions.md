@@ -249,6 +249,20 @@ Scope: only the three `Minecraft.has*Down()` methods. Direct
 action matrix. Ctrl+Q stack drop and Ctrl+pick data now follow the raw frame;
 Q alone still drops one item.
 
+## D22. Client settings are an on-demand query
+
+`QuerySettings` returns the client settings that affect action mapping:
+`gamemode`, `sensitivity`, mouse inversion, smooth camera, camera type,
+scoping, GUI scale and GUI-scaled dimensions. It is a request/response query,
+not a 10 Hz `State` field.
+
+Reason: camera pixels to degrees and GUI slot coordinates depend on client
+options, but options change rarely and do not belong in the per-tick state
+stream. A query keeps `State` lean and lets the host refresh after an options
+change. The keybind table is not included; the host uses the client's configured
+keybinds (vanilla defaults for the reference client). Sneaking/sprinting are not
+added to `State`; the host or tests infer them from movement speed.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:

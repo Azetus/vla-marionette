@@ -79,6 +79,7 @@ function handleMessage(header) {
       break;
     case "QueryBlockResult":
     case "QueryInventoryResult":
+    case "QuerySettingsResult":
     case "ChatAck": {
       responses.push(header);
       const id = header.request_id;
@@ -143,6 +144,11 @@ function queryInventory() {
   return sendRequest({ type: "QueryInventory", request_id: id });
 }
 
+function querySettings() {
+  const id = nextId();
+  return sendRequest({ type: "QuerySettings", request_id: id });
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -180,16 +186,35 @@ async function run() {
     session.image?.pixel_format === "jpeg", "image spec 854x480 jpeg");
   check(session.render?.width === 640 && session.render?.height === 360,
     "render target 640x360");
-  for (const capability of ["query_block", "query_inventory", "chat"]) {
+  for (const capability of ["query_block", "query_inventory", "chat", "query_settings"]) {
     check((session.capabilities ?? []).includes(capability), `capability ${capability}`);
   }
 
   const state0 = await waitFor(
     () => (lastState && lastState.in_world && lastState.screen_open === false &&
-      lastState.tick > 10 ? lastState : null),
+      lastState.tick > 10 && lastState.input_locked === true ? lastState : null),
     "stable in-world state");
   check(state0.on_ground === true, "player is on ground");
   check(state0.input_locked === true, "physical input lock is armed");
+
+  const settings = await querySettings();
+  check(settings.ok === true && settings.reason === null, "settings query ok");
+  check(["survival", "creative", "adventure", "spectator"].includes(settings.gamemode),
+    `settings gamemode: ${settings.gamemode}`);
+  check(typeof settings.sensitivity === "number" &&
+    settings.sensitivity >= 0 && settings.sensitivity <= 1,
+    `settings sensitivity: ${settings.sensitivity}`);
+  check(typeof settings.invert_mouse_x === "boolean" &&
+    typeof settings.invert_mouse_y === "boolean", "settings invert flags");
+  check(typeof settings.smooth_camera === "boolean" &&
+    typeof settings.scoping === "boolean", "settings camera flags");
+  check(["first_person", "third_person_back", "third_person_front"]
+    .includes(settings.camera_type), `settings camera_type: ${settings.camera_type}`);
+  check(Number.isInteger(settings.gui_scale) && settings.gui_scale >= 1,
+    `settings gui_scale: ${settings.gui_scale}`);
+  check(Number.isInteger(settings.gui_width) && settings.gui_width > 0 &&
+    Number.isInteger(settings.gui_height) && settings.gui_height > 0,
+    `settings gui size: ${settings.gui_width}x${settings.gui_height}`);
 
   const bx = Math.floor(state0.x);
   const by = Math.floor(state0.y);

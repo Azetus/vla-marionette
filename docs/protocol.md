@@ -52,6 +52,7 @@ TCP_NODELAY is enabled.
 | mod → host | `ShutdownAck` | shutdown request accepted |
 | mod → host | `QueryBlockResult` | async reply to `QueryBlock` |
 | mod → host | `QueryInventoryResult` | async reply to `QueryInventory` |
+| mod → host | `QuerySettingsResult` | async reply to `QuerySettings` |
 | mod → host | `ChatAck` | async reply to `Chat` |
 | host → mod | `ActionChunk` | ordered raw input frames |
 | host → mod | `Release` | interrupt current input |
@@ -59,6 +60,7 @@ TCP_NODELAY is enabled.
 | host → mod | `Shutdown` | save and close the client |
 | host → mod | `QueryBlock` | read a block state / block entity |
 | host → mod | `QueryInventory` | read the selected slot and inventory |
+| host → mod | `QuerySettings` | read client settings and game mode |
 | host → mod | `Chat` | send one chat line, command when it starts with `/` |
 
 ## 3. `SessionInfo`
@@ -79,7 +81,7 @@ TCP_NODELAY is enabled.
   "render": {"width": 640, "height": 360},
   "window": {"width": 640, "height": 360},
   "capabilities": ["ping", "observation", "state", "raw_input", "shutdown",
-                   "query_block", "query_inventory", "chat"],
+                   "query_block", "query_inventory", "chat", "query_settings"],
   "limits": {"max_action_frames": 20}
 }
 ```
@@ -107,6 +109,7 @@ Current capabilities:
 - `query_block`
 - `query_inventory`
 - `chat`
+- `query_settings`
 
 `tick_ms` is a nominal value. The logical tick can catch up or pause; it is not a
 wall-clock guarantee.
@@ -604,3 +607,55 @@ Rules:
   Verify effects with `QueryBlock`, `QueryInventory`, or `State`.
 - Plain chat is public in multiplayer and is subject to chat signing, server
   filters and rate limits. It is only as safe as the host that sends it.
+
+## 19. `QuerySettings`
+
+Reads the client settings that map raw input to camera/GUI behavior. It is an
+on-demand snapshot, not a 10 Hz state field.
+
+```json
+{"type": "QuerySettings", "request_id": 8}
+```
+
+```json
+{
+  "type": "QuerySettingsResult",
+  "request_id": 8,
+  "ok": true,
+  "reason": null,
+  "tick": 1302,
+  "gamemode": "survival",
+  "sensitivity": 0.5,
+  "invert_mouse_x": false,
+  "invert_mouse_y": false,
+  "smooth_camera": false,
+  "camera_type": "first_person",
+  "scoping": false,
+  "gui_scale": 1,
+  "gui_width": 640,
+  "gui_height": 360
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `gamemode` | `survival`, `creative`, `adventure` or `spectator` |
+| `sensitivity` | mouse sensitivity option, 0–1 |
+| `invert_mouse_x/y` | mouse inversion options |
+| `smooth_camera` | smooth-camera option |
+| `camera_type` | `first_person`, `third_person_back`, `third_person_front` |
+| `scoping` | player is currently using a spyglass |
+| `gui_scale` | current GUI scale |
+| `gui_width/gui_height` | current GUI-scaled dimensions |
+
+- Read on the client thread with the same `request_id`, pending limit and
+  session guard as the other queries.
+- The values reflect client settings at read time; an options change is visible
+  to the next query.
+- The keybind table is not included; the host is expected to use the client's
+  configured keybinds (the reference client uses vanilla defaults).
+- The camera pixel-to-degree mapping stays host-side. For reference, vanilla
+  applies `sensMod = (sensitivity * 0.6 + 0.2)^3`, then multiplies mouse pixels
+  by `sensMod * 1.2` in normal view (and `sensMod * 0.15` while scoping), with
+  the invert options applied and pitch clamped to ±90. `smooth_camera` changes
+  the response curve.

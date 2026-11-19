@@ -16,6 +16,9 @@ All runs used the same installed client jar and the superflat test world.
 | Continuous mining (dirt + stone) | 62 checks passed | 62 checks passed |
 | Graceful shutdown | passed | passed |
 
+This regression predates the `QuerySettings` addition; the current query check
+includes it and reports 55 checks (see [query-acceptance.md](query-acceptance.md)).
+
 ## Normal window
 
 M1 three-run acceptance:

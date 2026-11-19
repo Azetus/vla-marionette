@@ -86,10 +86,11 @@ Minecraft main/client thread:
   normalization, and command-vs-chat classification.
 - `QueryService`: outstanding-request limit, client-thread hop, and
   session-scoped response delivery.
-- `McQueryReader`: block state/properties/block-entity, crosshair target, and
-  inventory reads; dispatch of `sendCommand`/`sendChat`.
+- `McQueryReader`: block state/properties/block-entity, crosshair target,
+  inventory, and client-settings reads; dispatch of
+  `sendCommand`/`sendChat`.
 - `QueryResponses`: response builders for `QueryBlockResult`,
-  `QueryInventoryResult`, and `ChatAck`.
+  `QueryInventoryResult`, `QuerySettingsResult`, and `ChatAck`.
 
 ### `mixin`
 

@@ -3,10 +3,12 @@ package com.vlamarionette.marionette.query;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
@@ -17,6 +19,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -96,6 +99,26 @@ public final class McQueryReader {
         return new InventorySnapshot(inventory.getSelectedSlot(), slots);
     }
 
+    public static SettingsSnapshot readSettings(Minecraft mc) throws QueryFailure {
+        LocalPlayer player = mc.player;
+        if (mc.level == null || player == null) {
+            throw new QueryFailure("no_level");
+        }
+        Options options = mc.options;
+        GameType gameMode = player.gameMode();
+        return new SettingsSnapshot(
+                gameMode == null ? null : gameMode.getName(),
+                options.sensitivity().get(),
+                options.invertMouseX().get(),
+                options.invertMouseY().get(),
+                options.smoothCamera,
+                options.getCameraType().name().toLowerCase(Locale.ROOT),
+                player.isScoping(),
+                mc.getWindow().getGuiScale(),
+                mc.getWindow().getGuiScaledWidth(),
+                mc.getWindow().getGuiScaledHeight());
+    }
+
     /**
      * Dispatches one chat line on the client thread.
      *
@@ -163,6 +186,12 @@ public final class McQueryReader {
         public InventorySnapshot {
             slots = List.copyOf(slots);
         }
+    }
+
+    public record SettingsSnapshot(String gameMode, double sensitivity,
+            boolean invertMouseX, boolean invertMouseY, boolean smoothCamera,
+            String cameraType, boolean scoping, int guiScale, int guiWidth,
+            int guiHeight) {
     }
 }
 

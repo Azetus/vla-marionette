@@ -64,6 +64,7 @@ public final class SessionInfo {
         capabilities.add("query_block");
         capabilities.add("query_inventory");
         capabilities.add("chat");
+        capabilities.add("query_settings");
         info.add("capabilities", capabilities);
 
         JsonObject limits = new JsonObject();

@@ -98,6 +98,38 @@ class QueryResponsesTest {
     }
 
     @Test
+    void serializesSettingsResult() {
+        JsonObject json = QueryResponses.settingsOk(9, 1302, "survival", 0.5,
+                false, true, false, "first_person", false, 2, 320, 180);
+
+        assertEquals("QuerySettingsResult", json.get("type").getAsString());
+        assertEquals(9, json.get("request_id").getAsInt());
+        assertTrue(json.get("ok").getAsBoolean());
+        assertTrue(json.get("reason").isJsonNull());
+        assertEquals("survival", json.get("gamemode").getAsString());
+        assertEquals(0.5, json.get("sensitivity").getAsDouble());
+        assertFalse(json.get("invert_mouse_x").getAsBoolean());
+        assertTrue(json.get("invert_mouse_y").getAsBoolean());
+        assertFalse(json.get("smooth_camera").getAsBoolean());
+        assertEquals("first_person", json.get("camera_type").getAsString());
+        assertFalse(json.get("scoping").getAsBoolean());
+        assertEquals(2, json.get("gui_scale").getAsInt());
+        assertEquals(320, json.get("gui_width").getAsInt());
+        assertEquals(180, json.get("gui_height").getAsInt());
+    }
+
+    @Test
+    void serializesSettingsErrorWithNullGameMode() {
+        JsonObject json = QueryResponses.settingsError(null, 1303, "no_level");
+
+        assertEquals("QuerySettingsResult", json.get("type").getAsString());
+        assertTrue(json.get("request_id").isJsonNull());
+        assertFalse(json.get("ok").getAsBoolean());
+        assertEquals("no_level", json.get("reason").getAsString());
+        assertFalse(json.has("gamemode"));
+    }
+
+    @Test
     void serializesChatAck() {
         JsonObject ok = QueryResponses.chatAck(6, true, null, ChatRequest.KIND_COMMAND, 1305);
         assertEquals("ChatAck", ok.get("type").getAsString());

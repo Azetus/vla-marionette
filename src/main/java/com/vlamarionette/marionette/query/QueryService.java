@@ -105,8 +105,52 @@ public final class QueryService {
         });
     }
 
-    public void handleChat(JsonObject message) {
+    public void handleSettings(JsonObject message) {
         String session = transport.sessionId();
+        QueryRequests.SettingsQuery request;
+        try {
+            request = QueryRequests.parseSettings(message);
+        } catch (QueryRequestException e) {
+            respond(session, QueryResponses.settingsError(
+                    e.requestId(), ClientClock.tick(), e.reason()));
+            return;
+        }
+
+        if (!tryAcquire()) {
+            respond(session, QueryResponses.settingsError(
+                    request.requestId(), ClientClock.tick(), "busy"));
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) {
+            release();
+            respond(session, QueryResponses.settingsError(
+                    request.requestId(), ClientClock.tick(), "not_ready"));
+            return;
+        }
+        mc.execute(() -> {
+            try {
+                McQueryReader.SettingsSnapshot settings = McQueryReader.readSettings(mc);
+                respond(session, QueryResponses.settingsOk(request.requestId(),
+                        ClientClock.tick(), settings.gameMode(), settings.sensitivity(),
+                        settings.invertMouseX(), settings.invertMouseY(),
+                        settings.smoothCamera(), settings.cameraType(),
+                        settings.scoping(), settings.guiScale(), settings.guiWidth(),
+                        settings.guiHeight()));
+            } catch (QueryFailure failure) {
+                respond(session, QueryResponses.settingsError(request.requestId(),
+                        ClientClock.tick(), failure.reason()));
+            } catch (Throwable t) {
+                LOG.error("[vla] QuerySettings failed", t);
+                respond(session, QueryResponses.settingsError(request.requestId(),
+                        ClientClock.tick(), "internal"));
+            } finally {
+                release();
+            }
+        });
+    }
+
+    public void handleChat(JsonObject message) {        String session = transport.sessionId();
         ChatRequest request;
         try {
             request = ChatRequest.parse(message);

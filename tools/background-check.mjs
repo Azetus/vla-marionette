@@ -186,7 +186,7 @@ async function run() {
   const stable = await waitFor(
     () => (lastState && lastState.in_world && lastState.screen_open === false &&
       lastState.on_ground === true && lastState.capture?.valid === true &&
-      lastState.tick > 10 ? lastState : null),
+      lastState.tick > 10 && lastState.input_locked === true ? lastState : null),
     "stable in-world state", 30000);
   check(stable.input_locked === true, "input lock armed");
 
@@ -496,4 +496,6 @@ run()
     finish(null);
   })
   .catch((error) => finish(error));
+
+
 

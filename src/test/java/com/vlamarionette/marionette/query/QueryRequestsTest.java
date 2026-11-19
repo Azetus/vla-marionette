@@ -96,6 +96,23 @@ class QueryRequestsTest {
         assertNull(error.requestId());
     }
 
+    @Test
+    void parsesSettingsQuery() throws Exception {
+        QueryRequests.SettingsQuery query = QueryRequests.parseSettings(json(
+                "{\"type\":\"QuerySettings\",\"request_id\":14}"));
+
+        assertEquals(14, query.requestId());
+    }
+
+    @Test
+    void rejectsSettingsWithoutRequestId() {
+        QueryRequestException error = assertThrows(QueryRequestException.class,
+                () -> QueryRequests.parseSettings(json("{\"type\":\"QuerySettings\"}")));
+
+        assertEquals("bad_shape", error.reason());
+        assertNull(error.requestId());
+    }
+
     private static JsonObject json(String text) {
         return JsonParser.parseString(text).getAsJsonObject();
     }

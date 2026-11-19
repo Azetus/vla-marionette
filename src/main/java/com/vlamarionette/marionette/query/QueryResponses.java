@@ -84,6 +84,32 @@ public final class QueryResponses {
         return base("QueryInventoryResult", requestId, false, reason, tick);
     }
 
+    public static JsonObject settingsOk(int requestId, long tick, String gameMode,
+            double sensitivity, boolean invertMouseX, boolean invertMouseY,
+            boolean smoothCamera, String cameraType, boolean scoping,
+            int guiScale, int guiWidth, int guiHeight) {
+        JsonObject json = base("QuerySettingsResult", requestId, true, null, tick);
+        if (gameMode == null) {
+            json.add("gamemode", JsonNull.INSTANCE);
+        } else {
+            json.addProperty("gamemode", gameMode);
+        }
+        json.addProperty("sensitivity", sensitivity);
+        json.addProperty("invert_mouse_x", invertMouseX);
+        json.addProperty("invert_mouse_y", invertMouseY);
+        json.addProperty("smooth_camera", smoothCamera);
+        json.addProperty("camera_type", cameraType);
+        json.addProperty("scoping", scoping);
+        json.addProperty("gui_scale", guiScale);
+        json.addProperty("gui_width", guiWidth);
+        json.addProperty("gui_height", guiHeight);
+        return json;
+    }
+
+    public static JsonObject settingsError(Integer requestId, long tick, String reason) {
+        return base("QuerySettingsResult", requestId, false, reason, tick);
+    }
+
     public static JsonObject chatAck(Integer requestId, boolean ok, String reason,
             String kind, long tick) {
         JsonObject json = base("ChatAck", requestId, ok, reason, tick);

@@ -56,11 +56,20 @@ if ($javaVersion -notmatch 'version "25\.') {
 }
 
 if (-not $Installed) {
-    if (-not $Jar) { $Jar = Join-Path $workspace 'build\libs\vla-marionette.jar' }
+    if (-not $Jar) {
+        # Build output is versioned; isolated runs copy it under the same name.
+        $propsFile = Join-Path $workspace 'gradle.properties'
+        if (-not (Test-Path $propsFile)) { throw "gradle.properties not found: $propsFile" }
+        $props = ConvertFrom-StringData (Get-Content $propsFile -Raw)
+        $Jar = Join-Path $workspace "build\libs\vla-marionette-$($props.minecraft_version)-neoforge-$($props.mod_version).jar"
+    }
     if (-not (Test-Path $Jar)) { throw "mod jar not found: $Jar; run tools/build.ps1 first" }
     $Jar = (Resolve-Path $Jar).Path
-} elseif (-not (Test-Path (Join-Path $versionDir 'mods\vla-marionette.jar'))) {
-    throw "installed mod jar not found: $(Join-Path $versionDir 'mods\vla-marionette.jar'); run tools/deploy.ps1 first"
+} else {
+    $installedJars = @(Get-ChildItem (Join-Path $versionDir 'mods') -Filter 'vla-marionette*.jar' -File -ErrorAction SilentlyContinue)
+    if ($installedJars.Count -ne 1) {
+        throw "expected exactly one vla-marionette jar in mods, found $($installedJars.Count); run tools/deploy.ps1 first"
+    }
 }
 
 $activeFile = Join-Path $workspace 'runs\active.json'
@@ -111,8 +120,8 @@ enableVsync:true
 
     if (-not $NoDeploy) {
         $modsDir = Join-Path $gameDir 'mods'
-        Get-ChildItem $modsDir -Filter 'vla-marionette.jar' -File -ErrorAction SilentlyContinue | Remove-Item -Force
-        Copy-Item $Jar (Join-Path $modsDir 'vla-marionette.jar') -Force
+        Get-ChildItem $modsDir -Filter 'vla-marionette*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+        Copy-Item $Jar (Join-Path $modsDir (Split-Path $Jar -Leaf)) -Force
     }
 }
 

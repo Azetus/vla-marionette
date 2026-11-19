@@ -1,13 +1,18 @@
 param(
     [string]$Jar = "",
-    [string]$GameDir = "",
-    [switch]$NoBackup
+    [string]$GameDir = ""
 )
 
 $ErrorActionPreference = 'Stop'
 $workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-if (-not $Jar) { $Jar = Join-Path $workspace 'build\libs\vla-marionette.jar' }
-if (-not (Test-Path $Jar)) { throw "jar not found: $Jar" }
+if (-not $Jar) {
+    # Build output is versioned; install it under the same name.
+    $propsFile = Join-Path $workspace 'gradle.properties'
+    if (-not (Test-Path $propsFile)) { throw "gradle.properties not found: $propsFile" }
+    $props = ConvertFrom-StringData (Get-Content $propsFile -Raw)
+    $Jar = Join-Path $workspace "build\libs\vla-marionette-$($props.minecraft_version)-neoforge-$($props.mod_version).jar"
+}
+if (-not (Test-Path $Jar)) { throw "jar not found: $Jar; build the project first" }
 $Jar = (Resolve-Path $Jar).Path
 
 if (-not $GameDir) {
@@ -20,18 +25,20 @@ $GameDir = (Resolve-Path $GameDir).Path
 $modsDir = Join-Path $GameDir 'mods'
 New-Item -ItemType Directory -Force -Path $modsDir | Out-Null
 
-$target = Join-Path $modsDir 'vla-marionette.jar'
-if (Test-Path $target) {
-    if (-not $NoBackup) {
-        $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-        $backup = Join-Path $modsDir "vla-marionette.bak-$stamp.jar.disabled"
-        Copy-Item $target $backup -Force
-        Write-Host "[deploy] backup $target -> $backup"
-    }
-    Remove-Item $target -Force
+$targetName = Split-Path $Jar -Leaf
+if ($targetName -notlike 'vla-marionette*.jar') {
+    throw "unexpected jar name: $targetName; expected vla-marionette*.jar"
 }
 
+# Do not keep old vla-marionette jars (active or disabled). NeoForge loads every
+# jar in mods/, so a leftover version would duplicate the mod id.
+Get-ChildItem $modsDir -Filter 'vla-marionette*' -File | Remove-Item -Force
+
+$target = Join-Path $modsDir $targetName
 Copy-Item $Jar $target -Force
-$count = @(Get-ChildItem $modsDir -Filter 'vla-marionette.jar' -File).Count
-if ($count -ne 1) { throw "expected exactly one vla-marionette jar, found $count" }
+
+$activeJars = @(Get-ChildItem $modsDir -Filter 'vla-marionette*.jar' -File)
+if ($activeJars.Count -ne 1 -or $activeJars[0].FullName -ne $target) {
+    throw "expected exactly one installed vla-marionette jar, found $($activeJars.Count)"
+}
 Write-Host "[deploy] $target"

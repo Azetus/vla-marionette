@@ -73,6 +73,8 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 tasks.named('jar') {
+    archiveFileName.set(
+            "vla-marionette-${project.minecraft_version}-neoforge-${project.mod_version}.jar")
     manifest {
         attributes([
             'Implementation-Title'  : project.mod_name,

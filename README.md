@@ -63,8 +63,9 @@ mise exec -- ./gradlew test --console=plain
 mise exec -- ./gradlew build --console=plain
 ```
 
-构建产物是 `build/libs/vla-marionette.jar`。如果 Gradle 缓存不在默认的 `~/.gradle`，
-构建前设置 `GRADLE_USER_HOME`。
+构建产物是 `build/libs/vla-marionette-<minecraft版本>-neoforge-<mod版本>.jar`
+（当前为 `build/libs/vla-marionette-26.1.2-neoforge-0.1.0.jar`）。如果 Gradle
+缓存不在默认的 `~/.gradle`，构建前设置 `GRADLE_USER_HOME`。
 
 ## 配置
 
@@ -111,7 +112,7 @@ launcher 脚本从被 git 忽略的本机配置文件读取路径。复制
 常用命令：
 
 ```powershell
-# 把构建产物部署到安装目录；旧 jar 保留为 .jar.disabled。
+# 把构建产物部署到安装目录；旧的 vla-marionette* 会被删除。
 .\tools\deploy.ps1 -GameDir '<version-dir>'
 
 # 用测试世界启动安装客户端。
@@ -125,6 +126,9 @@ launcher 脚本从被 git 忽略的本机配置文件读取路径。复制
 ```
 
 `launch-mc.ps1` 也可以创建隔离的 `runs/mc-*/game` 副本，不触碰安装目录的存档。
+`deploy.ps1` 读取带版本号的构建产物，并按原文件名安装；部署前会删除 `mods/` 下所有
+旧的 `vla-marionette*`（包括 `.jar.disabled` 备份），确保 NeoForge 只加载一个同 mod id
+的 jar。隔离运行同样按原文件名复制。
 `-Fov`/`-FovMode` 通过 `-Dvla.fov.*` 覆盖启动配置，只对这一次启动生效；
 `stop-mc.ps1` 先校验进程 id 并请求窗口关闭；按 PID 强杀只是超时兜底。
 

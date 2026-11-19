@@ -72,8 +72,10 @@ mise exec -- ./gradlew test --console=plain
 mise exec -- ./gradlew build --console=plain
 ```
 
-The build output is `build/libs/vla-marionette.jar`. If the Gradle cache is not
-the default `~/.gradle`, set `GRADLE_USER_HOME` before building.
+The build output is
+`build/libs/vla-marionette-<minecraft-version>-neoforge-<mod-version>.jar`
+(currently `build/libs/vla-marionette-26.1.2-neoforge-0.1.0.jar`). If the Gradle
+cache is not the default `~/.gradle`, set `GRADLE_USER_HOME` before building.
 
 ## Configuration
 
@@ -124,7 +126,7 @@ The example file contains placeholders only.
 Typical commands:
 
 ```powershell
-# Deploy the built jar to an installation (old jar is kept as .jar.disabled).
+# Deploy the built jar to an installation (old vla-marionette* files are removed).
 .\tools\deploy.ps1 -GameDir '<version-dir>'
 
 # Launch the installed client with a test world.
@@ -138,10 +140,13 @@ Typical commands:
 ```
 
 `launch-mc.ps1` can also create an isolated `runs/mc-*/game` copy without
-touching the installed saves. `-Fov`/`-FovMode` use `-Dvla.fov.*` to override the
-startup config for that launch only. `stop-mc.ps1` validates the process id and
-asks the window to close first; forced PID termination is only a timeout
-fallback.
+touching the installed saves. `deploy.ps1` reads the versioned build artifact and
+installs it under the same name; it removes every old `vla-marionette*` file
+(including `.jar.disabled` backups) first, so NeoForge cannot load multiple jars
+for the same mod id. Isolated runs copy the same versioned name.
+`-Fov`/`-FovMode` use `-Dvla.fov.*` to override the startup config for that
+launch only. `stop-mc.ps1` validates the process id and asks the window to close
+first; forced PID termination is only a timeout fallback.
 
 ## Limits
 

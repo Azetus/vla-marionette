@@ -54,6 +54,9 @@ Minecraft main/client thread:
 - `FrameMailbox`: one pending frame; the JPEG encoder thread scales and encodes
   with quality 0.9.
 - `CaptureStatus`: valid/reason, last observation id/tick, encoder failures.
+- A minimized window renders at 30 FPS instead of vanilla's 10
+  (`FramerateLimitTrackerMixin`). Two 30 s minimized runs measured 4.83 and
+  4.85 Hz with p95 233.8/233.7 ms; 10 FPS produced only 4.10/4.11 Hz.
 
 ### `state`
 
@@ -91,6 +94,8 @@ Minecraft main/client thread:
 ### `mixin`
 
 - `GameRendererResizeMixin`: forces the render target to 640×360.
+- `FramerateLimitTrackerMixin`: raises the minimized-window frame limit from
+  vanilla 10 FPS to 30 FPS so 5 Hz capture keeps enough render frames.
 - `KeyboardHandlerAccessor` / `MouseHandlerAccessor`: expose vanilla private
   input dispatch.
 - `KeyboardHandlerMixin` / `MouseHandlerMixin`: drop physical input while the
@@ -147,6 +152,8 @@ been replaced.
 - HUD is never hidden.
 - Render target/window 640×360; JPEG 854×480; quality 0.9.
 - 5 Hz capture target; 10 Hz state target; 20 TPS logical client tick target.
+- Minimized render floor 30 FPS (vanilla 10) so capture keeps 6 frames per 200 ms
+  sample.
 - One active + at most one scheduled action.
 - Query/chat responses are keyed by `request_id`, not ordered, and never leak
   into a newer session.

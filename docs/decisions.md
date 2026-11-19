@@ -189,13 +189,35 @@ the line was handed to the vanilla path; it does not prove execution. Plain chat
 is public in multiplayer and subject to chat signing, filters and rate limits.
 The mod does not open the chat screen and does not fold internal whitespace.
 
+## D19. Minimized window renders at 30 FPS
+
+Vanilla caps an iconified window at 10 FPS. Capture samples on render frames at
+a 5 Hz target (200 ms), so 10 FPS leaves only two frames of headroom; a sample
+that misses its frame slips to 300 ms. Two 30 s measurements produced 119 and
+123 observations (4.10 and 4.11 Hz), with p95 300 ms, below the 4.5 Hz gate.
+
+The client raises only the `WINDOW_ICONIFIED` limit from 10 to 30 FPS through
+`FramerateLimitTrackerMixin`. Normal focused rendering, AFK limits,
+out-of-level menus and every other throttle reason are unchanged.
+
+Two post-change runs produced 145 observations each (4.83 and 4.85 Hz), p95
+233.8/233.7 ms, no observation-id gaps, no encoder failures, and valid 854×480
+frames. Forward injection while minimized delivered 1.254/1.157 blocks with a
+direction dot of 1.000 and `dy=0`.
+
+Consequence: a minimized client uses more CPU/GPU than vanilla; the 30 FPS floor
+is a deliberate trade for capture stability. 4.83 Hz is slightly below 5 Hz
+because a 30 FPS loop quantizes a 200 ms sample to 6 or 7 frames.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:
 
 - no multi-chunk concurrency;
 - no sub-tick event stream; one held state per tick is intentional;
-- background/minimized capture and continuous mining are not fully verified;
+- continuous mining has an independent mouse-grab gate and is not yet verified;
 - no freeze is intentional and permanent for v1;
 - query/chat responses are best effort during shutdown;
-- command dispatch is not sandboxed; the host is responsible for what it sends.
+- command dispatch is not sandboxed; the host is responsible for what it sends;
+- a visible but unfocused window is not separately measured; minimized is the
+  harder capture case.

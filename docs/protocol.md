@@ -131,6 +131,8 @@ The body is a JPEG. Current implementation:
 - render target 640×360;
 - encoded 854×480, quality 0.9;
 - wall-clock 5 Hz target;
+- a minimized window renders at 30 FPS instead of vanilla's 10
+  (`FramerateLimitTrackerMixin`); two 30 s minimized runs measured 4.83/4.85 Hz;
 - HUD is kept;
 - `state_tick` is the logical tick at sampling time;
 - `obs_id` increases per session;

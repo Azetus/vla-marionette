@@ -19,6 +19,8 @@ client:
 - block and inventory queries with per-request asynchronous replies;
 - a unified chat/command entry (`Chat`), with no command filtering;
 - a physical input lock with ESC manual takeover;
+- minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward
+  injection while minimized;
 - reconnect as a new session;
 - graceful host-initiated shutdown with integrated-server save.
 
@@ -27,6 +29,7 @@ client:
 - [Architecture](docs/architecture.md)
 - [Protocol](docs/protocol.md)
 - [M1 acceptance](docs/m1-acceptance.md)
+- [Minimized capture acceptance](docs/background-acceptance.md)
 - [Query and chat acceptance](docs/query-acceptance.md)
 - [Decisions](docs/decisions.md)
 
@@ -103,8 +106,10 @@ window to close first; forced PID termination is only a timeout fallback.
 - `Chat` sends one line; a leading `/` uses the vanilla command path. There is no
   command filtering, and `ChatAck.ok` only means the line was dispatched, not
   that the server executed it.
-- Background operation has not been fully verified: minimizing lowers vanilla
-  rendering to 10 FPS, and continuous mining has an independent mouse-grab gate.
+- Minimized capture and forward injection are verified. A minimized window
+  renders at 30 FPS instead of vanilla's 10, which keeps 5 Hz capture at
+  ~4.8 Hz. A visible-but-unfocused window is not separately measured.
+- Continuous mining has an independent mouse-grab gate and is not yet verified.
 - There is no multi-chunk concurrency.
 - A single client tick can contain at most one press/release edge per key or
   button; multiple edges inside one tick are not represented.

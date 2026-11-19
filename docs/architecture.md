@@ -149,6 +149,9 @@ been replaced.
   ORs them into `Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()`, which
   otherwise poll the physical GLFW keyboard; this keeps Ctrl+Q stack drop and
   similar modifier-dependent paths consistent with a physical keyboard.
+- The mouse injector keeps a virtual cursor, primes `MouseHandler` with a no-op
+  move so the first move after a grab/screen transition is not ignored, and
+  flushes pending deltas at tick Post so `ended` covers the last frame's mouse.
 - Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
   needs `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke
   hand-mined dirt and stone (stone through eight chained chunks), so the gate was

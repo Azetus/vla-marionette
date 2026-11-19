@@ -86,6 +86,13 @@ public final class McInputInjector implements InputSink {
         }
 
         if (pendingDx != 0.0 || pendingDy != 0.0) {
+            // MouseHandler ignores the first move after a grab/screen change.
+            // Send a no-op move at the current virtual position so that flag is
+            // consumed before the real delta, then move to the target.
+            double primeX = virtualX;
+            double primeY = virtualY;
+            InputInjection.run(() -> mouse.vla$onMove(handle, primeX, primeY));
+
             virtualX += pendingDx;
             virtualY += pendingDy;
             if (mc.screen != null) {

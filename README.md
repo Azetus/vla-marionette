@@ -19,8 +19,11 @@ client:
 - modifier combinations such as Ctrl+Q follow the raw frame, including the
   vanilla paths that poll the physical keyboard;
 - block and inventory queries with per-request asynchronous replies;
-- a client-settings query for sensitivity, camera type, GUI scale and game mode;
+- a client-settings query for sensitivity, camera type, GUI scale, game mode,
+  and the full current keybind table;
 - a unified chat/command entry (`Chat`), with no command filtering;
+- a raw-input action matrix covering movement, jump, sneak/sprint, attack, use,
+  hotbar, scroll, inventory, drop and camera in normal and minimized windows;
 - a physical input lock with ESC manual takeover;
 - minimized-window capture at ~4.8 Hz with a 30 FPS minimized floor, and forward
   injection while minimized;
@@ -37,6 +40,7 @@ client:
 - [Minimized capture acceptance](docs/background-acceptance.md)
 - [Continuous mining acceptance](docs/dig-acceptance.md)
 - [Query and chat acceptance](docs/query-acceptance.md)
+- [Action matrix](docs/action-matrix.md)
 - [Same-build regression](docs/regression.md)
 - [Decisions](docs/decisions.md)
 
@@ -118,10 +122,12 @@ window to close first; forced PID termination is only a timeout fallback.
   ~4.8 Hz. Normal-window runs were observed with the client unfocused and
   occluded by other windows; no separate cadence comparison was made.
 - Continuous mining with held left-button frames is verified for hand-mined dirt
-  and stone, focused and minimized. Stone takes eight chained chunks by hand.
-  Tool-specific mining, block drops and mining multiple blocks in one hold are
-  not separately asserted. The vanilla `continueAttack` mouse-grab gate was
-  satisfied in the tested flows.
+  and stone, in a normal window and minimized. Stone takes eight chained chunks
+  by hand. Tool-specific mining, block drops and mining multiple blocks in one
+  hold are not separately asserted. The vanilla `continueAttack` mouse-grab gate
+  was satisfied in the tested flows.
+- GUI text input, Fn/media keys, mouse buttons beyond 0–7, entity/NBT/world
+  queries, multiplayer and long soak runs are not provided.
 - There is no multi-chunk concurrency.
 - A single client tick can contain at most one press/release edge per key or
   button; multiple edges inside one tick are not represented.

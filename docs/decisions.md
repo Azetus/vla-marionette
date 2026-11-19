@@ -274,6 +274,16 @@ reference tools use this condition. The mod does not reorder the handshake or
 reject early actions for this transient. If strict first-state ordering is
 needed later, arm before the handshake or add a `not_armed` rejection.
 
+## D24. The injector primes the first mouse move
+
+Vanilla `MouseHandler` ignores the first move after a grab or screen transition
+(`ignoreFirstMove`). If the injector's virtual cursor is already initialized,
+the first real delta of a session or after closing a screen can be consumed by
+that flag and produce no turn. `flushMouse` now sends a no-op move at the
+current virtual position before applying the pending delta. The no-op consumes
+the flag; the real delta is accumulated. This was exposed by the camera and
+inventory parts of the action matrix.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:
@@ -290,3 +300,12 @@ These are current limitations, not decisions to keep forever:
 - normal-window runs were observed with the client unfocused and occluded by
   other windows; that condition is covered functionally, but was not separately
   cadence-measured; minimized is the harder capture case.
+
+## Non-goals
+
+- GUI text input (`charTyped`, IME, dead keys); chat and commands use `Chat`.
+- Fn/media keys and mouse buttons beyond 0–7.
+- Entity queries, full NBT/components and general world info.
+- `State.sneaking` / `State.sprinting`; infer movement mode from speed.
+- Multiplayer and long-duration soak tests.
+- Semantic action fields on the wire (`forward`, `attack`, `camera`, ...).

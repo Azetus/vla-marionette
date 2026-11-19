@@ -362,6 +362,9 @@ Opening a GUI does not interrupt raw input.
   the physical GLFW keyboard. Ctrl+Q therefore drops the selected stack, while Q
   alone drops one item. Direct `InputConstants.isKeyDown` debug paths are not
   bridged.
+- Before applying a mouse delta, the injector sends a no-op move at the current
+  virtual cursor position. This consumes vanilla's `ignoreFirstMove` flag so the
+  first real move after a grab or screen transition is not dropped.
 - Continuous mining is just held button-0 frames. Vanilla continues the attack
   only when `screen == null`, `keyAttack` is down and
   `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke hand-mined

@@ -69,3 +69,11 @@ run.
   other windows; functional checks passed. No separate cadence comparison was
   made for that condition. Long-duration runs, multiplayer servers and
   tool-specific mining are not covered.
+
+## Later additions
+
+- The full keybind table is part of `QuerySettings`; the current query check
+  passes 63 checks.
+- The action matrix passes 123 checks in a normal window and 69 checks with the
+  window minimized (see [action-matrix.md](action-matrix.md)). It also exposed
+  and fixed the first-mouse-move priming bug (D24).

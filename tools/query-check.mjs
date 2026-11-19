@@ -182,11 +182,15 @@ function check(condition, label) {
 
 async function run() {
   await waitFor(() => session, "SessionInfo");
-  check(session.image?.width === 854 && session.image?.height === 480 &&
-    session.image?.pixel_format === "jpeg", "image spec 854x480 jpeg");
-  check(session.render?.width === 640 && session.render?.height === 360,
-    "render target 640x360");
-  for (const capability of ["query_block", "query_inventory", "chat", "query_settings"]) {
+  const imageW = Number(session.image?.width ?? 0);
+  const imageH = Number(session.image?.height ?? 0);
+  check(imageW > 0 && imageH > 0 && session.image?.pixel_format === "jpeg",
+    "image spec jpeg");
+  check(session.render?.width === imageW && session.render?.height === imageH &&
+    session.window?.width === imageW && session.window?.height === imageH,
+    "render/window match image size");
+  for (const capability of ["query_block", "query_inventory", "chat",
+    "query_settings", "set_hud"]) {
     check((session.capabilities ?? []).includes(capability), `capability ${capability}`);
   }
 
@@ -208,6 +212,8 @@ async function run() {
     typeof settings.invert_mouse_y === "boolean", "settings invert flags");
   check(typeof settings.smooth_camera === "boolean" &&
     typeof settings.scoping === "boolean", "settings camera flags");
+  check(typeof settings.hide_gui === "boolean",
+    `settings hide_gui: ${settings.hide_gui}`);
   check(["first_person", "third_person_back", "third_person_front"]
     .includes(settings.camera_type), `settings camera_type: ${settings.camera_type}`);
   check(Number.isInteger(settings.gui_scale) && settings.gui_scale >= 1,
@@ -231,6 +237,15 @@ async function run() {
   check(keybinds["key.drop"]?.type === "keysym" &&
     keybinds["key.drop"]?.code === 81, "key.drop is Q (81)");
   check(keybinds["key.smoothCamera"] === null, "unbound mapping is null");
+
+  sendFrame({ type: "SetHud", visible: false });
+  await sleep(300);
+  const hidden = await querySettings();
+  check(hidden.hide_gui === true, "SetHud(false) hides the GUI");
+  sendFrame({ type: "SetHud", visible: true });
+  await sleep(300);
+  const shown = await querySettings();
+  check(shown.hide_gui === false, "SetHud(true) shows the GUI");
 
   const bx = Math.floor(state0.x);
   const by = Math.floor(state0.y);
@@ -419,4 +434,3 @@ server.listen(port, "127.0.0.1", () => {
 });
 
 run().then(() => finish(null)).catch((error) => finish(error));
-

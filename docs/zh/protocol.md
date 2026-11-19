@@ -55,6 +55,7 @@ mod 主动连接宿主，使用 TCP；每个成功连接是新 session；开启 
 | host → mod | `QueryBlock` | 读取方块状态/方块实体 |
 | host → mod | `QueryInventory` | 读取选中槽位和背包 |
 | host → mod | `QuerySettings` | 读取客户端设置、游戏模式和键位 |
+| host → mod | `SetHud` | 直接显示/隐藏 HUD |
 | host → mod | `Chat` | 发送一行聊天；以 `/` 开头为命令 |
 
 ## 3. `SessionInfo`
@@ -68,10 +69,11 @@ mod 主动连接宿主，使用 TCP；每个成功连接是新 session；开启 
   "tick_ms": 50,
   "image": {"width": 854, "height": 480, "pixel_format": "jpeg",
             "origin": "top-left"},
-  "render": {"width": 640, "height": 360},
-  "window": {"width": 640, "height": 360},
+  "render": {"width": 854, "height": 480},
+  "window": {"width": 854, "height": 480},
   "capabilities": ["ping", "observation", "state", "raw_input", "shutdown",
-                   "query_block", "query_inventory", "chat", "query_settings"],
+                   "query_block", "query_inventory", "chat", "query_settings",
+                   "set_hud"],
   "limits": {"max_action_frames": 20}
 }
 ```
@@ -82,9 +84,9 @@ mod 主动连接宿主，使用 TCP；每个成功连接是新 session；开启 
 | `mc_version` | string | Minecraft 版本 |
 | `mod_version` | string | mod 版本 |
 | `tick_ms` | int | 名义逻辑 tick，50 ms |
-| `image` | object | JPEG 输出规格 |
-| `render` | object | 渲染目标尺寸 |
-| `window` | object | 客户端窗口尺寸 |
+| `image` | object | JPEG 输出规格；与 render/window 同尺寸 |
+| `render` | object | 渲染目标尺寸；与 image/window 同尺寸 |
+| `window` | object | 客户端窗口尺寸；与 image/render 同尺寸 |
 | `capabilities` | string[] | 仅列已实现能力 |
 | `limits.max_action_frames` | int | 单个 `ActionChunk` 最大帧数 |
 
@@ -99,6 +101,7 @@ mod 主动连接宿主，使用 TCP；每个成功连接是新 session；开启 
 - `query_inventory`
 - `chat`
 - `query_settings`
+- `set_hud`
 
 `tick_ms` 是名义值；逻辑 tick 会追赶或暂停，不是墙钟保证。
 
@@ -119,10 +122,10 @@ mod 主动连接宿主，使用 TCP；每个成功连接是新 session；开启 
 
 body 是 JPEG。当前实现：
 
-- 渲染目标 640×360；
-- 输出 854×480，质量 0.9；
-- 墙钟 5 Hz 目标；
-- 最小化窗口渲染 30 FPS，而不是 vanilla 10 FPS
+- 渲染目标、窗口和 JPEG 输出使用同一尺寸（默认 854×480）；
+- 质量 0.9；
+- 墙钟 5 Hz 目标，或每 N 个 client tick 采样；
+- 最小化窗口渲染 30 FPS，而不是 Minecraft 原版的 10 FPS
   （`FramerateLimitTrackerMixin`），以保证 5 Hz 采集有足够渲染帧；
 - 保留 HUD；
 - `state_tick` 是采样时的逻辑 tick；
@@ -317,27 +320,27 @@ body 是 JPEG。当前实现：
 
 ## 12. 输入注入
 
-- 键盘：vanilla `KeyboardHandler.keyPress`/`keyRelease`；有 `Screen` 时交给
+- 键盘：Minecraft 原版 `KeyboardHandler.keyPress`/`keyRelease`；有 `Screen` 时交给
   screen，否则交给 `KeyMapping`。
-- 鼠标按钮：vanilla `MouseHandler.onButton`；GUI 收到
+- 鼠标按钮：Minecraft 原版 `MouseHandler.onButton`；GUI 收到
   `mouseClicked`/`mouseReleased`，世界收到 `KeyMapping` + click。
 - 鼠标移动：虚拟光标按原始像素推进，在 tick post 通过
   `MouseHandler.handleAccumulatedMovement()` flush。
-- 滚轮：vanilla `MouseHandler.onScroll`。
+- 滚轮：Minecraft 原版 `MouseHandler.onScroll`。
 - 注入期间绕过焦点检查；不按 GUI 语义分类。
 - 当前帧按住的修饰键也会被
   `Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()` 看到。Ctrl+Q 因此丢整组，
   Q 单独丢一个。直接调用 `InputConstants.isKeyDown` 的调试路径不桥接。
-- 应用鼠标 delta 前，注入器先在当前虚拟位置发一次 no-op move，消费 vanilla
+- 应用鼠标 delta 前，注入器先在当前虚拟位置发一次 no-op move，消费 Minecraft 原版
   `ignoreFirstMove`，避免屏幕/抓取切换后的第一个真实位移被丢弃。
-- 持续挖掘只是按住 button-0 的帧。vanilla 只在 `screen == null`、`keyAttack` 按下、
+- 持续挖掘只是按住 button-0 的帧。Minecraft 原版只在 `screen == null`、`keyAttack` 按下、
   `mouseHandler.isMouseGrabbed()` 都成立时继续攻击；本层不绕过该门控。
-- GUI/世界语义完全由 vanilla `Screen`/`KeyMapping` 决定。
+- GUI/世界语义完全由 Minecraft 原版 `Screen`/`KeyMapping` 决定。
 
 ### 12.1 物理输入锁和 ESC 接管
 
 - 连接后的 session arm 物理输入锁。
-- arm 锁、以及 ESC 暂停界面关闭后的 re-arm，会在客户端线程释放全部 vanilla key
+- arm 锁、以及 ESC 暂停界面关闭后的 re-arm，会在客户端线程释放全部 Minecraft 原版 key
   mapping。连接前按住的键/按钮因此不会在自动化接管后继续生效；否则它们的 release
   边沿也会被拦截。
 - armed 期间物理键鼠事件被丢弃。
@@ -468,7 +471,7 @@ mod                          host
 - 位置查询先检查 `isInValidBounds`（`out_of_bounds`），再以
   `loadOrGenerate=false` 查客户端 chunk 缓存（`chunk_not_loaded`）。
   `ClientLevel.hasChunk` 总是 true，不能用。
-- 准星查询读取 vanilla `Minecraft.hitResult`，每渲染帧更新一次；不是即时 raycast，
+- 准星查询读取 Minecraft 原版的 `hitResult`，每渲染帧更新一次；不是即时 raycast，
   可能最多落后一个渲染帧。未命中或命中实体为 `no_target`。
 - 只返回方块 id、属性和方块实体类型；不返回 NBT。
 
@@ -499,7 +502,7 @@ mod                          host
 
 ## 18. `Chat`
 
-一行聊天。以 `/` 开头走 vanilla 命令路径，否则作为聊天发送。
+一行聊天。以 `/` 开头走 Minecraft 原版命令路径，否则作为聊天发送。
 
 ```json
 {"type":"Chat","request_id":6,"text":"/setblock 10 64 -3 minecraft:stone"}
@@ -522,7 +525,7 @@ mod                          host
 
 规则：
 
-- 只 trim 两端；内部空白保留（不执行 vanilla `ChatScreen` 的空白归一化，引号 JSON
+- 只 trim 两端；内部空白保留（不执行 Minecraft 原版 `ChatScreen` 的空白归一化，引号 JSON
   等命令参数保留空格）。
 - 控制字符（`< 0x20`、`0x7F`）拒绝；单独 `/` 或空命令体为 `bad_text`。
 - 调 `ClientPacketListener.sendCommand` 前只去掉一个前导 `/`；`//foo` 视为命令
@@ -554,9 +557,10 @@ mod                          host
   "smooth_camera":false,
   "camera_type":"first_person",
   "scoping":false,
-  "gui_scale":1,
-  "gui_width":640,
-  "gui_height":360,
+  "hide_gui":false,
+  "gui_scale":2,
+  "gui_width":427,
+  "gui_height":240,
   "keybinds":{
     "key.forward":{"type":"keysym","code":87},
     "key.attack":{"type":"mouse","code":0},
@@ -574,6 +578,7 @@ mod                          host
 | `smooth_camera` | 平滑相机选项 |
 | `camera_type` | `first_person`、`third_person_back`、`third_person_front` |
 | `scoping` | 玩家当前是否在用望远镜 |
+| `hide_gui` | 当前 HUD 是否隐藏（`options.hideGui`） |
 | `gui_scale` | 当前 GUI scale |
 | `gui_width/gui_height` | 当前 GUI 缩放后尺寸 |
 | `keybinds` | 全部当前 `KeyMapping`，按 mapping 技术名索引 |
@@ -588,6 +593,23 @@ mod                          host
 
 - 与其他查询一样在客户端线程读取，使用相同 `request_id`、在途上限和 session 守卫。
 - 值反映读取时的设置；options 改变后下一次查询可见。
-- 相机像素→角度换算仍在 host。参考：vanilla 先算
+- 相机像素→角度换算仍在 host。参考：Minecraft 原版先算
   `sensMod = (sensitivity * 0.6 + 0.2)^3`，普通视角乘 `sensMod * 1.2`，望远镜视角乘
   `sensMod * 0.15`，再应用反转选项，pitch 钳制在 ±90；`smooth_camera` 会改变响应曲线。
+
+## 20. `SetHud`
+
+直接设置 HUD 是否可见。它不依赖键码，也不使用 F1 键的显示/隐藏切换语义。
+
+```json
+{"type":"SetHud","visible":false}
+```
+
+- `visible` 必填布尔值；`false` 隐藏 HUD（`options.hideGui=true`），`true` 显示。
+- 在客户端线程直接设置；不记录旧值，不在断线、离开世界或退出时恢复。
+- 不写入 `options.txt`；客户端重启后回到默认显示。
+- 设置后 Minecraft 原版的 F1 键（显示/隐藏 HUD）仍可再次切换；mod 不强制保持。host 可用
+  `QuerySettings.hide_gui` 读取当前实际值。
+- 该消息是可选的：host 可以完全不发，HUD 保持客户端当前状态。为了让观察画面
+  可复现，建议 host 在需要时显式发送并查询确认。
+- 没有 `HudAck`；形状非法的消息被忽略并记录日志，不改变 HUD。

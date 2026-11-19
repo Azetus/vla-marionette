@@ -60,7 +60,8 @@ TCP_NODELAY is enabled.
 | host → mod | `Shutdown` | save and close the client |
 | host → mod | `QueryBlock` | read a block state / block entity |
 | host → mod | `QueryInventory` | read the selected slot and inventory |
-| host → mod | `QuerySettings` | read client settings and game mode |
+| host → mod | `QuerySettings` | read client settings, game mode and keybinds |
+| host → mod | `SetHud` | show or hide the HUD |
 | host → mod | `Chat` | send one chat line, command when it starts with `/` |
 
 ## 3. `SessionInfo`
@@ -78,10 +79,11 @@ TCP_NODELAY is enabled.
     "pixel_format": "jpeg",
     "origin": "top-left"
   },
-  "render": {"width": 640, "height": 360},
-  "window": {"width": 640, "height": 360},
+  "render": {"width": 854, "height": 480},
+  "window": {"width": 854, "height": 480},
   "capabilities": ["ping", "observation", "state", "raw_input", "shutdown",
-                   "query_block", "query_inventory", "chat", "query_settings"],
+                   "query_block", "query_inventory", "chat", "query_settings",
+                   "set_hud"],
   "limits": {"max_action_frames": 20}
 }
 ```
@@ -93,9 +95,9 @@ TCP_NODELAY is enabled.
 | `mc_version` | string | Minecraft version |
 | `mod_version` | string | mod version |
 | `tick_ms` | int | nominal logical tick, 50 ms |
-| `image` | object | JPEG output specification |
-| `render` | object | render target size |
-| `window` | object | client window size |
+| `image` | object | JPEG output specification; same size as render/window |
+| `render` | object | render target size; same size as image/window |
+| `window` | object | client window size; same size as image/render |
 | `capabilities` | string[] | implemented features only |
 | `limits.max_action_frames` | int | maximum frames in one `ActionChunk` |
 
@@ -110,6 +112,7 @@ Current capabilities:
 - `query_inventory`
 - `chat`
 - `query_settings`
+- `set_hud`
 
 `tick_ms` is a nominal value. The logical tick can catch up or pause; it is not a
 wall-clock guarantee.
@@ -131,10 +134,10 @@ wall-clock guarantee.
 
 The body is a JPEG. Current implementation:
 
-- render target 640×360;
-- encoded 854×480, quality 0.9;
-- wall-clock 5 Hz target;
-- a minimized window renders at 30 FPS instead of vanilla's 10
+- window, render target and JPEG output use the same size (default 854×480);
+- quality 0.9;
+- wall-clock 5 Hz target, or every N client ticks;
+- a minimized window renders at 30 FPS instead of Minecraft's 10
   (`FramerateLimitTrackerMixin`) to keep 5 Hz capture supplied with render frames;
 - HUD is kept;
 - `state_tick` is the logical tick at sampling time;
@@ -348,13 +351,13 @@ Opening a GUI does not interrupt raw input.
 
 ## 12. Input injection
 
-- Keyboard: vanilla `KeyboardHandler.keyPress`/`keyRelease`; with a `Screen`, the
+- Keyboard: Minecraft's `KeyboardHandler.keyPress`/`keyRelease`; with a `Screen`, the
   screen receives the key; otherwise `KeyMapping` does.
-- Mouse buttons: vanilla `MouseHandler.onButton`; GUI receives
+- Mouse buttons: Minecraft's `MouseHandler.onButton`; GUI receives
   `mouseClicked`/`mouseReleased`, the world receives `KeyMapping` + click.
 - Mouse movement: a virtual cursor is advanced by raw pixels and flushed through
   `MouseHandler.handleAccumulatedMovement()` at tick post.
-- Scroll: vanilla `MouseHandler.onScroll`.
+- Scroll: Minecraft's `MouseHandler.onScroll`.
 - Injected events bypass the focus check while the injection marker is active;
   they are not interpreted as GUI-specific actions.
 - Modifier keys held by the current frame are also visible to
@@ -363,18 +366,18 @@ Opening a GUI does not interrupt raw input.
   alone drops one item. Direct `InputConstants.isKeyDown` debug paths are not
   bridged.
 - Before applying a mouse delta, the injector sends a no-op move at the current
-  virtual cursor position. This consumes vanilla's `ignoreFirstMove` flag so the
+  virtual cursor position. This consumes Minecraft's `ignoreFirstMove` flag so the
   first real move after a grab or screen transition is not dropped.
-- Continuous mining is just held button-0 frames. Vanilla continues the attack
+- Continuous mining is just held button-0 frames. Minecraft continues the attack
   only when `screen == null`, `keyAttack` is down and
   `mouseHandler.isMouseGrabbed()`; the device layer does not bypass that gate.
-- GUI/world semantics are decided entirely by vanilla `Screen`/`KeyMapping`.
+- GUI/world semantics are decided entirely by Minecraft's `Screen`/`KeyMapping`.
 
 ### 12.1 Physical input lock and ESC takeover
 
 - A connected session arms the physical input lock.
 - Arming the lock, and re-arming it after the ESC pause screen closes, releases
-  every vanilla key mapping on the client thread. Keys or buttons held before the
+  every Minecraft key mapping on the client thread. Keys or buttons held before the
   session therefore cannot keep acting after automation takes over; their release
   edge would be blocked too.
 - Physical keyboard/mouse events are dropped while the lock is armed.
@@ -531,8 +534,8 @@ Implementation notes:
 - A position query checks `isInValidBounds` (`out_of_bounds`) and then asks the
   client chunk cache with `loadOrGenerate=false` (`chunk_not_loaded`).
   `ClientLevel.hasChunk` always returns true and cannot be used for this.
-- A crosshair query reads vanilla `Minecraft.hitResult`, which is updated once
-  per rendered frame. It is not an immediate raycast and can be up to one render
+- A crosshair query reads Minecraft's `hitResult`, which is updated once per
+  rendered frame. It is not an immediate raycast and can be up to one render
   frame stale. A miss or an entity hit is `no_target`.
 - Only the block id, properties and block-entity type are returned; no NBT.
 
@@ -569,7 +572,7 @@ Implementation notes:
 
 ## 18. `Chat`
 
-One chat line. A leading `/` selects the vanilla command path; otherwise the
+One chat line. A leading `/` selects the Minecraft command path; otherwise the
 line is sent as a chat message.
 
 ```json
@@ -594,7 +597,7 @@ line is sent as a chat message.
 Rules:
 
 - The text is trimmed at both ends only; internal whitespace is preserved (the
-  mod does not run vanilla `ChatScreen` whitespace normalization, so command
+  mod does not run Minecraft's `ChatScreen` whitespace normalization, so command
   arguments such as quoted JSON keep their spaces).
 - Control characters (`< 0x20`, `0x7F`) are rejected. A lone `/` or an empty
   command body is `bad_text`.
@@ -635,9 +638,10 @@ on-demand snapshot, not a 10 Hz state field.
   "smooth_camera": false,
   "camera_type": "first_person",
   "scoping": false,
-  "gui_scale": 1,
-  "gui_width": 640,
-  "gui_height": 360,
+  "hide_gui": false,
+  "gui_scale": 2,
+  "gui_width": 427,
+  "gui_height": 240,
   "keybinds": {
     "key.forward": {"type": "keysym", "code": 87},
     "key.attack": {"type": "mouse", "code": 0},
@@ -655,6 +659,7 @@ on-demand snapshot, not a 10 Hz state field.
 | `smooth_camera` | smooth-camera option |
 | `camera_type` | `first_person`, `third_person_back`, `third_person_front` |
 | `scoping` | player is currently using a spyglass |
+| `hide_gui` | current HUD hidden state (`options.hideGui`) |
 | `gui_scale` | current GUI scale |
 | `gui_width/gui_height` | current GUI-scaled dimensions |
 | `keybinds` | all current `KeyMapping`s, keyed by technical mapping name |
@@ -675,8 +680,32 @@ mappings), read-only:
   session guard as the other queries.
 - The values reflect client settings at read time; an options change is visible
   to the next query.
-- The camera pixel-to-degree mapping stays host-side. For reference, vanilla
+- The camera pixel-to-degree mapping stays host-side. For reference, Minecraft's
   applies `sensMod = (sensitivity * 0.6 + 0.2)^3`, then multiplies mouse pixels
   by `sensMod * 1.2` in normal view (and `sensMod * 0.15` while scoping), with
   the invert options applied and pitch clamped to ±90. `smooth_camera` changes
   the response curve.
+
+## 20. `SetHud`
+
+Directly sets HUD visibility. It is independent of key codes and does not use
+F1's show/hide toggle semantics.
+
+```json
+{"type":"SetHud","visible":false}
+```
+
+- `visible` is a required boolean; `false` hides the HUD
+  (`options.hideGui=true`), `true` shows it.
+- Applied on the client thread. No old value is recorded, and nothing is restored
+  on disconnect, world leave or exit.
+- It does not write `options.txt`; a client restart returns to the default
+  visible HUD.
+- Minecraft's F1 key (show/hide HUD) can still toggle the HUD after `SetHud`; the
+  mod does not force the value. The host can read the actual state with
+  `QuerySettings.hide_gui`.
+- The message is optional: the host may never send it, and the HUD keeps its
+  current client state. For reproducible observations, the host should set it
+  explicitly when needed and verify with the query.
+- There is no `HudAck`; a malformed message is ignored and logged without
+  changing the HUD.

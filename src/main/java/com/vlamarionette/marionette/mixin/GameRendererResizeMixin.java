@@ -18,11 +18,11 @@ public abstract class GameRendererResizeMixin {
 
     @ModifyVariable(method = "resize", at = @At("HEAD"), argsOnly = true, ordinal = 0)
     private int vla$forceWidth(int width) {
-        return CaptureSpec.RENDER_WIDTH;
+        return CaptureSpec.width();
     }
 
     @ModifyVariable(method = "resize", at = @At("HEAD"), argsOnly = true, ordinal = 1)
     private int vla$forceHeight(int height) {
-        return CaptureSpec.RENDER_HEIGHT;
+        return CaptureSpec.height();
     }
 }

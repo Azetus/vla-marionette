@@ -31,8 +31,15 @@ Minecraft 主/客户端线程：
 
 - `Framing`：大端 `u32 frameLen`、`u32 headerLen`、UTF-8 JSON header、可选二进制
   body；header/body 有硬上限。
-- `SessionInfo`：每个 TCP 连接一次握手，声明 capabilities、图像/渲染/窗口尺寸和
-  单次动作最大帧数；没有全局版本字段。
+- `SessionInfo`：每个 TCP 连接一次握手，声明 capabilities、统一的图像/渲染/窗口尺寸
+  和单次动作最大帧数；没有全局版本字段。
+
+### `config`
+
+- `VlaConfig`：启动时读取 `config/vla_marionette-client.toml`，提供 bridge 和 capture
+  两组设置；缺失文件时写默认值，非法值记录日志并回退。
+- `CaptureConfig` / `CaptureMode`：统一尺寸、`wall_clock` 或 `tick` 模式、墙钟频率和
+  tick 间隔。
 
 ### `net`
 
@@ -44,12 +51,12 @@ Minecraft 主/客户端线程：
 
 ### `capture`
 
-- `CaptureSpec`：固定渲染/窗口 640×360，JPEG 输出 854×480。
-- `CaptureScheduler`：在 `RenderFrameEvent.Post` 上按真实时间 5 Hz 采样。
+- `CaptureSpec`：统一窗口、渲染目标和 JPEG 输出尺寸，默认 854×480；缩放不在采集链路中发生。
+- `CaptureScheduler`：默认按真实时间 5 Hz 采样，也可按每 N 个 client tick 采样。
 - `FrameGrabber`：渲染线程读取主渲染目标。
-- `FrameMailbox`：单槽待编码帧；编码线程缩放并以质量 0.9 编码 JPEG。
+- `FrameMailbox`：单槽待编码帧；编码线程直接编码统一尺寸，质量 0.9。
 - `CaptureStatus`：valid/reason、最后 observation id/tick、编码失败数。
-- 最小化窗口由 `FramerateLimitTrackerMixin` 把渲染下限从 vanilla 10 FPS 抬到 30 FPS，
+- 最小化窗口由 `FramerateLimitTrackerMixin` 把渲染下限从 Minecraft 原版的 10 FPS 抬到 30 FPS，
   保证 5 Hz 采样有足够渲染帧。
 
 ### `state`
@@ -67,7 +74,7 @@ Minecraft 主/客户端线程：
 - `ActionReceipt`：线上回执。
 - `InputInjection`：区分桥接注入事件与物理事件的标记。
 - `InputLock`：物理输入锁、实际按住键/按钮跟踪、ESC 接管状态。
-- `McInputInjector`：通过 vanilla `KeyboardHandler`/`MouseHandler` 发送键鼠事件；
+- `McInputInjector`：通过 Minecraft 原版 `KeyboardHandler`/`MouseHandler` 发送键鼠事件；
   维护虚拟鼠标位置，并在 tick post flush 鼠标位移。
 
 ### `query`
@@ -75,16 +82,22 @@ Minecraft 主/客户端线程：
 - `QueryRequests` / `ChatRequest`：网络线程的形状/文本校验、归一化和命令/聊天分类。
 - `QueryService`：在途请求上限、客户端线程跳转、按 session 投递响应。
 - `McQueryReader`：方块状态/属性/方块实体、准星目标、背包、客户端设置（包括完整
-  当前 keybind 表），以及 `sendCommand`/`sendChat` 派发。
+  当前 keybind 表和 `hide_gui`），以及 `sendCommand`/`sendChat` 派发。
 - `QueryResponses`：`QueryBlockResult`、`QueryInventoryResult`、
   `QuerySettingsResult`、`ChatAck` 的响应构造。
 
+### `mc`
+
+- `WindowLayout`：把窗口锁到统一尺寸并禁止手动缩放。
+- `HudController`：处理 host 的 `SetHud`，直接设置 `options.hideGui`；不记录基线、
+  不写 `options.txt`。
+
 ### `mixin`
 
-- `GameRendererResizeMixin`：强制渲染目标 640×360。
-- `FramerateLimitTrackerMixin`：最小化窗口的 vanilla 10 FPS 下限改为 30 FPS，
+- `GameRendererResizeMixin`：强制渲染目标为配置的统一尺寸。
+- `FramerateLimitTrackerMixin`：最小化窗口的 Minecraft 原版的 10 FPS 下限改为 30 FPS，
   保证 5 Hz 采集有足够渲染帧。
-- `KeyboardHandlerAccessor` / `MouseHandlerAccessor`：暴露 vanilla 私有输入派发。
+- `KeyboardHandlerAccessor` / `MouseHandlerAccessor`：暴露 Minecraft 原版私有输入派发。
 - `KeyboardHandlerMixin` / `MouseHandlerMixin`：自动化锁 armed 时丢弃物理输入，
   ESC 例外。
 - `MinecraftFocusMixin`：窗口失焦/最小化时仍允许注入鼠标累积和 flush。
@@ -117,19 +130,19 @@ Minecraft 主/客户端线程：
 - `ActionChunk` 的每一帧是一个逻辑 client tick。
 - `keys`/`buttons` 是按住状态；注入器与上一 tick 比较，计算按下/松开边沿。
 - 鼠标 `dx/dy` 是客户区逻辑像素；mod 不做模型单位换算、不算角度，换算由 host 完成。
-- 键鼠事件走 vanilla 派发，打开的 `Screen` 自然接收；GUI 和世界不是两套协议模式。
+- 键鼠事件走 Minecraft 原版派发，打开的 `Screen` 自然接收；GUI 和世界不是两套协议模式。
 - 连接后 arm `InputLock`；armed 期间物理输入被丢弃。arm（以及暂停界面关闭后的
-  re-arm）还会释放全部 vanilla key mapping，避免连接前按住的键在自动化接管后继续
+  re-arm）还会释放全部 Minecraft 原版 key mapping，避免连接前按住的键在自动化接管后继续
   生效。世界中按 ESC 会释放注入输入、以 `manual_takeover` 中断动作，并在暂停界面
   打开期间允许物理输入；关闭暂停界面后重新加锁。
 - `State.input_locked` 表示物理输入是否被抑制；`State.held` 报告实际按住键/按钮。
 - 当前帧的注入修饰键通过 `InjectedInputState` 发布；mixin 把它们并入
   `Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()`。这样 Ctrl+Q 整组丢弃
   等路径与物理键盘一致。
-- 鼠标注入器维护虚拟光标；每次 flush 先发一次当前位置的 no-op move，消费 vanilla
+- 鼠标注入器维护虚拟光标；每次 flush 先发一次当前位置的 no-op move，消费 Minecraft 原版
   `ignoreFirstMove`，避免屏幕/抓取切换后的第一个真实位移被吞掉；pending delta 在
   tick Post flush，保证 `ended` 覆盖最后一帧鼠标。
-- 按住 button-0 的帧走 vanilla `continueAttack`。vanilla 还要求
+- 按住 button-0 的帧走 Minecraft 原版 `continueAttack`。Minecraft 原版还要求
   `screen == null`、`keyAttack` 按下、`mouseHandler.isMouseGrabbed()`；本层不绕过
   该门控。
 - `ended` 在最后一帧输入和鼠标 flush 之后发送。
@@ -138,10 +151,11 @@ Minecraft 主/客户端线程：
 
 - 不冻结/暂停/覆盖 tick rate。
 - 永不隐藏 HUD。
-- 渲染目标/窗口 640×360；JPEG 854×480；质量 0.9。
+- 渲染目标/窗口/JPEG 尺寸统一，默认 854×480；质量 0.9。
 - 采集目标 5 Hz；状态目标 10 Hz；逻辑 client tick 目标 20 TPS。
-- 最小化渲染下限 30 FPS（vanilla 10），让 200 ms 采样有 6 帧余量。
+- 最小化渲染下限 30 FPS（Minecraft 原版的 10），让 200 ms 采样有 6 帧余量。
 - 同一时间一个 active，至多一个 scheduled。
 - 查询/聊天响应按 `request_id` 关联，不保证顺序，不泄漏到新 session。
 - `ChatAck.ok` 表示已派发，不表示服务器已执行；mod 不过滤聊天/命令。
+- HUD 由 host 的 `SetHud` 或 Minecraft 原版的 F1 键控制；mod 不维护基线，也不写 `options.txt`。
 - mod 内没有模型词表或模型侧常数。

@@ -27,6 +27,9 @@ dependencies {
     // make them explicit for the pure unit-test source set as well.
     testImplementation 'com.google.code.gson:gson:2.13.2'
     testImplementation 'org.slf4j:slf4j-api:2.0.17'
+    // NightConfig is on the NeoForge runtime classpath; add it to the pure
+    // unit-test runtime so the TOML loader can be tested without Minecraft.
+    testImplementation 'com.electronwill.night-config:toml:3.8.3'
 }
 
 tasks.named('test') {

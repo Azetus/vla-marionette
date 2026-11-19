@@ -2,6 +2,7 @@ package com.vlamarionette.marionette.protocol;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.vlamarionette.marionette.capture.CaptureSpec;
 import java.util.Objects;
 
 /**
@@ -18,13 +19,6 @@ public final class SessionInfo {
     public static final String MOD_VERSION = "0.1.0";
     public static final int TICK_MS = 50;
 
-    public static final int IMAGE_WIDTH = 854;
-    public static final int IMAGE_HEIGHT = 480;
-    public static final int RENDER_WIDTH = 640;
-    public static final int RENDER_HEIGHT = 360;
-    public static final int WINDOW_WIDTH = 640;
-    public static final int WINDOW_HEIGHT = 360;
-
     private SessionInfo() {
     }
 
@@ -39,20 +33,20 @@ public final class SessionInfo {
         info.addProperty("tick_ms", TICK_MS);
 
         JsonObject image = new JsonObject();
-        image.addProperty("width", IMAGE_WIDTH);
-        image.addProperty("height", IMAGE_HEIGHT);
+        image.addProperty("width", CaptureSpec.width());
+        image.addProperty("height", CaptureSpec.height());
         image.addProperty("pixel_format", "jpeg");
         image.addProperty("origin", "top-left");
         info.add("image", image);
 
         JsonObject render = new JsonObject();
-        render.addProperty("width", RENDER_WIDTH);
-        render.addProperty("height", RENDER_HEIGHT);
+        render.addProperty("width", CaptureSpec.width());
+        render.addProperty("height", CaptureSpec.height());
         info.add("render", render);
 
         JsonObject window = new JsonObject();
-        window.addProperty("width", WINDOW_WIDTH);
-        window.addProperty("height", WINDOW_HEIGHT);
+        window.addProperty("width", CaptureSpec.width());
+        window.addProperty("height", CaptureSpec.height());
         info.add("window", window);
 
         JsonArray capabilities = new JsonArray();
@@ -65,6 +59,7 @@ public final class SessionInfo {
         capabilities.add("query_inventory");
         capabilities.add("chat");
         capabilities.add("query_settings");
+        capabilities.add("set_hud");
         info.add("capabilities", capabilities);
 
         JsonObject limits = new JsonObject();

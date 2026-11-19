@@ -10,15 +10,17 @@ VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tic
 
 ## 功能
 
-- **画面与状态**：以 5 Hz 目标输出 854×480 JPEG；以 10 Hz 目标报告位置、朝向、生命、
+- **画面与状态**：默认以 5 Hz 目标输出 854×480 JPEG；以 10 Hz 目标报告位置、朝向、生命、
   着地、hotbar、当前界面、输入锁和实际按住的键鼠。
 - **原始输入**：按 client tick 注入 GLFW 键码、鼠标按钮 0–7、客户区鼠标位移和滚轮；
   支持组合键、按住状态和跨 chunk 连续动作。
 - **动作组合**：动作由原始输入组合完成。
-- **查询**：方块、背包和客户端设置；设置查询返回完整当前 keybind 表。
+- **查询**：方块、背包和客户端设置；设置查询返回完整当前 keybind 表和 `hide_gui`。
 - **聊天/命令**：`Chat` 统一发送一行文本，`/` 开头走原版命令路径。
 - **会话控制**：连接后锁定物理输入，ESC 可手动接管；支持断线清理、重连新 session 和
   优雅关闭。
+- **HUD 控制**：host 可用 `SetHud` 直接显示/隐藏 HUD；Minecraft 原版的 F1 键
+  （显示/隐藏 HUD）也可切换。
 - **最小化运行**：最小化窗口保持 30 FPS 渲染下限和原始输入注入，采集目标仍为 5 Hz。
 
 ## 文档
@@ -41,7 +43,7 @@ VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tic
 - 仓库内的 Gradle wrapper。
 - 通过 `mise install` 安装 JDK 25；`mise.toml` 固定 Java 25.0.5。
 - 用于实机测试的 Minecraft/NeoForge 客户端安装。
-- 实机测试需要超平坦测试世界；客户端必须能在可设为 640×360 的窗口中运行。
+- 实机测试需要超平坦测试世界；客户端窗口由配置决定，默认 854×480。
 
 ## 构建与测试
 
@@ -61,6 +63,30 @@ mise exec -- ./gradlew build --console=plain
 
 构建产物是 `build/libs/vla-marionette.jar`。如果 Gradle 缓存不在默认的 `~/.gradle`，
 构建前设置 `GRADLE_USER_HOME`。
+
+## 配置
+
+首次启动会在 `config/vla_marionette-client.toml` 生成默认配置：
+
+```toml
+[bridge]
+host = "127.0.0.1"
+port = 25580
+retry_ms = 2000
+
+[capture]
+width = 854
+height = 480
+mode = "wall_clock"   # wall_clock | tick
+hz = 5.0
+tick_interval = 4
+```
+
+- `width/height` 同时决定窗口、渲染目标和 JPEG 输出尺寸，三者一致，不做缩放。
+- `wall_clock` 按真实时间采样；`tick` 在每 N 个 client tick 后的第一个渲染帧采样。
+- 端口、尺寸和采集模式的修改在重启客户端后生效；运行中的桥接不会重读配置。
+- HUD 不在 TOML 中配置；host 用 `SetHud` 控制，Minecraft 原版的 F1 键
+  （显示/隐藏 HUD）仍是独立开关。
 
 ## 实机测试
 
@@ -92,8 +118,8 @@ launcher 脚本从被 git 忽略的本机配置文件读取路径。复制
 
 ## 限制与边界
 
-- **设备层范围**：不实现冻结、暂停或 tick rate 覆盖；不隐藏 HUD；线上只有原始输入帧，
-  没有 `forward`/`attack`/`camera` 等语义动作字段。
+- **设备层范围**：不实现冻结、暂停或 tick rate 覆盖；HUD 默认不主动隐藏，host 可用
+  `SetHud` 控制；线上只有原始输入帧，没有 `forward`/`attack`/`camera` 等语义动作字段。
 - **输入范围**：支持 GLFW 键码 32–348 和鼠标按钮 0–7；不提供 GUI 文本输入、Fn/媒体键、
   8 号以上鼠标键。
 - **单 tick 表达**：一个 client tick 内每个键/按钮至多一个按下/松开边沿；不提供 sub-tick
@@ -105,7 +131,7 @@ launcher 脚本从被 git 忽略的本机配置文件读取路径。复制
   输入并允许手动接管（暂停界面期间物理输入可用）。`ChatAck.ok` 只表示已派发，不表示
   服务器已执行。
 - **运行环境**：最小化窗口以 30 FPS 渲染以维持 5 Hz 采集；多人服务器和长时间运行不在
-  当前范围；工具挖掘、掉落物和实体交互由 vanilla 处理，本层只注入原始输入。
+  当前范围；工具挖掘、掉落物和实体交互由 Minecraft 原版处理，本层只注入原始输入。
 
 ## 目录结构
 
@@ -115,10 +141,11 @@ src/main/java/com/vlamarionette/marionette/
   net/            传输、连接生命周期、入站路由、关闭
   capture/        帧抓取、JPEG 编码、latest-frame mailbox、调度
   state/          client tick 时钟和状态报告
-  action/         原始帧、调度、回执、vanilla 输入注入
+  action/         原始帧、调度、回执、Minecraft 原版输入注入
   query/          方块/背包读取、聊天/命令派发
-  mc/             窗口尺寸
-  mixin/          渲染目标、焦点绕过、vanilla 输入访问器
+  config/         TOML 配置加载
+  mc/             窗口尺寸与 HUD 控制
+  mixin/          渲染目标、焦点绕过、Minecraft 原版输入访问器
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
 src/test/java/    纯单元测试（不启动游戏进程）

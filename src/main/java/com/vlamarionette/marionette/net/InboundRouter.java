@@ -6,6 +6,7 @@ import com.vlamarionette.marionette.action.ActionParseException;
 import com.vlamarionette.marionette.action.ActionReceipt;
 import com.vlamarionette.marionette.action.ActionScheduler;
 import com.vlamarionette.marionette.action.InputLock;
+import com.vlamarionette.marionette.mc.HudController;
 import com.vlamarionette.marionette.query.QueryService;
 import com.vlamarionette.marionette.state.ClientClock;
 import net.minecraft.client.Minecraft;
@@ -38,6 +39,7 @@ public final class InboundRouter {
             case "QueryInventory" -> queries.handleInventory(message);
             case "QuerySettings" -> queries.handleSettings(message);
             case "Chat" -> queries.handleChat(message);
+            case "SetHud" -> HudController.handle(message);
             case "Release" -> {
                 Minecraft mc = Minecraft.getInstance();
                 if (mc == null) {

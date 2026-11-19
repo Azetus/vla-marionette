@@ -135,8 +135,8 @@ public final class QueryService {
                         ClientClock.tick(), settings.gameMode(), settings.sensitivity(),
                         settings.invertMouseX(), settings.invertMouseY(),
                         settings.smoothCamera(), settings.cameraType(),
-                        settings.scoping(), settings.guiScale(), settings.guiWidth(),
-                        settings.guiHeight(), settings.keybinds()));
+                        settings.scoping(), settings.hideGui(), settings.guiScale(),
+                        settings.guiWidth(), settings.guiHeight(), settings.keybinds()));
             } catch (QueryFailure failure) {
                 respond(session, QueryResponses.settingsError(request.requestId(),
                         ClientClock.tick(), failure.reason()));

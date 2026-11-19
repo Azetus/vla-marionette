@@ -33,8 +33,16 @@ Minecraft main/client thread:
 - `Framing`: big-endian `u32 frameLen`, `u32 headerLen`, UTF-8 JSON header,
   optional binary body. Header and body have hard limits.
 - `SessionInfo`: one handshake per TCP connection. It advertises capabilities,
-  image/render/window sizes, and the maximum action-frame count. It has no
-  global version field.
+  the unified image/render/window size, and the maximum action-frame count. It
+  has no global version field.
+
+### `config`
+
+- `VlaConfig`: reads `config/vla_marionette-client.toml` at startup and exposes
+  bridge and capture settings; it writes defaults if missing and falls back with
+  a log on invalid values.
+- `CaptureConfig` / `CaptureMode`: unified size, `wall_clock` or `tick` mode,
+  wall-clock Hz and tick interval.
 
 ### `net`
 
@@ -48,13 +56,14 @@ Minecraft main/client thread:
 
 ### `capture`
 
-- `CaptureSpec`: fixed render/window 640×360 and JPEG output 854×480.
-- `CaptureScheduler`: wall-clock 5 Hz sampling on `RenderFrameEvent.Post`.
+- `CaptureSpec`: unified window/render/JPEG size, 854×480 by default; no scaling
+  in the capture path.
+- `CaptureScheduler`: wall-clock 5 Hz by default, or every N client ticks.
 - `FrameGrabber`: reads the main render target on the render thread.
-- `FrameMailbox`: one pending frame; the JPEG encoder thread scales and encodes
-  with quality 0.9.
+- `FrameMailbox`: one pending frame; the encoder thread encodes the unified size
+  at quality 0.9.
 - `CaptureStatus`: valid/reason, last observation id/tick, encoder failures.
-- A minimized window renders at 30 FPS instead of vanilla's 10
+- A minimized window renders at 30 FPS instead of Minecraft's 10
   (`FramerateLimitTrackerMixin`), keeping enough render frames for 5 Hz capture.
 
 ### `state`
@@ -75,7 +84,7 @@ Minecraft main/client thread:
   physical events.
 - `InputLock`: physical-input lock, actual held-key/button tracking, and the ESC
   manual-takeover latch.
-- `McInputInjector`: sends keyboard/mouse events through vanilla
+- `McInputInjector`: sends keyboard/mouse events through Minecraft's
   `KeyboardHandler`/`MouseHandler`; maintains a virtual mouse position and
   flushes mouse movement at tick post.
 
@@ -86,17 +95,25 @@ Minecraft main/client thread:
 - `QueryService`: outstanding-request limit, client-thread hop, and
   session-scoped response delivery.
 - `McQueryReader`: block state/properties/block-entity, crosshair target,
-  inventory, client settings (including the full current keybind table), and
-  dispatch of `sendCommand`/`sendChat`.
+  inventory, client settings (including the full current keybind table and
+  `hide_gui`), and dispatch of `sendCommand`/`sendChat`.
 - `QueryResponses`: response builders for `QueryBlockResult`,
   `QueryInventoryResult`, `QuerySettingsResult`, and `ChatAck`.
 
+### `mc`
+
+- `WindowLayout`: locks the window to the unified size and disables manual
+  resizing.
+- `HudController`: applies the host's `SetHud` directly to
+  `options.hideGui`; no baseline and no `options.txt` write.
+
 ### `mixin`
 
-- `GameRendererResizeMixin`: forces the render target to 640×360.
+- `GameRendererResizeMixin`: forces the render target to the configured unified
+  size.
 - `FramerateLimitTrackerMixin`: raises the minimized-window frame limit from
-  vanilla 10 FPS to 30 FPS so 5 Hz capture keeps enough render frames.
-- `KeyboardHandlerAccessor` / `MouseHandlerAccessor`: expose vanilla private
+  Minecraft's 10 FPS to 30 FPS so 5 Hz capture keeps enough render frames.
+- `KeyboardHandlerAccessor` / `MouseHandlerAccessor`: expose Minecraft's private
   input dispatch.
 - `KeyboardHandlerMixin` / `MouseHandlerMixin`: drop physical input while the
   automation lock is armed, except ESC.
@@ -134,11 +151,11 @@ been replaced.
   edges against the previous tick.
 - Mouse `dx/dy` are client-area logical pixels. The mod does not convert model
   units or compute degrees; the host does that conversion.
-- Keyboard and mouse events use vanilla dispatch, so an open `Screen` receives
+- Keyboard and mouse events use Minecraft's dispatch, so an open `Screen` receives
   them naturally. GUI and world modes are not separate protocol modes.
 - A connected session arms `InputLock`; physical input is dropped while armed.
-  Arming (and re-arming after the pause screen closes) also releases all vanilla
-  key mappings, so keys held before the session cannot stay active.
+  Arming (and re-arming after the pause screen closes) also releases all
+  Minecraft key mappings, so keys held before the session cannot stay active.
   ESC from the world releases injected input, interrupts the action with
   `manual_takeover`, and allows physical input while the pause screen is open.
   Closing the pause screen re-arms the lock.
@@ -151,7 +168,7 @@ been replaced.
 - The mouse injector keeps a virtual cursor, primes `MouseHandler` with a no-op
   move so the first move after a grab/screen transition is not ignored, and
   flushes pending deltas at tick Post so `ended` covers the last frame's mouse.
-- Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
+- Held button-0 frames drive Minecraft's `continueAttack`. The Minecraft condition also
   needs `mouseHandler.isMouseGrabbed()`; the device layer does not bypass that
   gate.
 - `ended` is sent after the last frame's input and mouse flush.
@@ -160,12 +177,15 @@ been replaced.
 
 - No freeze/pause/tick-rate override.
 - HUD is never hidden.
-- Render target/window 640×360; JPEG 854×480; quality 0.9.
+- Render target/window/JPEG use the unified size, 854×480 by default; quality
+  0.9.
 - 5 Hz capture target; 10 Hz state target; 20 TPS logical client tick target.
-- Minimized render floor 30 FPS (vanilla 10) so capture keeps 6 frames per 200 ms
+- Minimized render floor 30 FPS (Minecraft's 10) so capture keeps 6 frames per 200 ms
   sample.
 - One active + at most one scheduled action.
 - Query/chat responses are keyed by `request_id`, not ordered, and never leak
   into a newer session.
 - `ChatAck.ok` means dispatched, not executed; chat is not filtered by the mod.
+- HUD visibility is controlled by the host's `SetHud` or Minecraft's F1 key
+  (show/hide HUD); the mod keeps no baseline and does not write `options.txt`.
 - No model vocabulary or model-side constants in the mod.

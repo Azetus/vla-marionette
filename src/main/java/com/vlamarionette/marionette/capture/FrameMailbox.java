@@ -27,8 +27,6 @@ public final class FrameMailbox {
     }
 
     private final FrameSink sink;
-    private final int outWidth;
-    private final int outHeight;
     private final float quality;
 
     private final Object lock = new Object();
@@ -42,10 +40,8 @@ public final class FrameMailbox {
     private final AtomicInteger dropped = new AtomicInteger();
     private final AtomicInteger encodeFailures = new AtomicInteger();
 
-    public FrameMailbox(FrameSink sink, int outWidth, int outHeight, float quality) {
+    public FrameMailbox(FrameSink sink, float quality) {
         this.sink = sink;
-        this.outWidth = outWidth;
-        this.outHeight = outHeight;
         this.quality = quality;
     }
 
@@ -131,15 +127,15 @@ public final class FrameMailbox {
 
             try {
                 byte[] jpeg = JpegEncoder.encode(frame.rgb(), frame.width(), frame.height(),
-                        outWidth, outHeight, quality);
+                        quality);
                 JsonObject header = new JsonObject();
                 header.addProperty("type", "Observation");
                 header.addProperty("session_id", frame.sessionId());
                 header.addProperty("obs_id", frame.frameId());
                 header.addProperty("state_tick", frame.tick());
                 header.addProperty("submit_ns", frame.captureNanos());
-                header.addProperty("img_w", outWidth);
-                header.addProperty("img_h", outHeight);
+                header.addProperty("img_w", frame.width());
+                header.addProperty("img_h", frame.height());
                 header.addProperty("pixel_format", "jpeg");
 
                 if (sink.offer(header, jpeg)) {

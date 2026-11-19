@@ -22,17 +22,17 @@ class SessionInfoTest {
         assertEquals("jpeg", image.get("pixel_format").getAsString());
         assertEquals("top-left", image.get("origin").getAsString());
 
-        assertEquals(640, info.getAsJsonObject("render").get("width").getAsInt());
-        assertEquals(360, info.getAsJsonObject("render").get("height").getAsInt());
-        assertEquals(640, info.getAsJsonObject("window").get("width").getAsInt());
-        assertEquals(360, info.getAsJsonObject("window").get("height").getAsInt());
+        assertEquals(854, info.getAsJsonObject("render").get("width").getAsInt());
+        assertEquals(480, info.getAsJsonObject("render").get("height").getAsInt());
+        assertEquals(854, info.getAsJsonObject("window").get("width").getAsInt());
+        assertEquals(480, info.getAsJsonObject("window").get("height").getAsInt());
     }
 
     @Test
     void advertisesOnlyImplementedCapabilities() {
         JsonObject info = SessionInfo.create("session-2");
 
-        assertEquals(9, info.getAsJsonArray("capabilities").size());
+        assertEquals(10, info.getAsJsonArray("capabilities").size());
         assertEquals("ping", info.getAsJsonArray("capabilities").get(0).getAsString());
         assertEquals("observation", info.getAsJsonArray("capabilities").get(1).getAsString());
         assertEquals("state", info.getAsJsonArray("capabilities").get(2).getAsString());
@@ -42,6 +42,7 @@ class SessionInfoTest {
         assertEquals("query_inventory", info.getAsJsonArray("capabilities").get(6).getAsString());
         assertEquals("chat", info.getAsJsonArray("capabilities").get(7).getAsString());
         assertEquals("query_settings", info.getAsJsonArray("capabilities").get(8).getAsString());
+        assertEquals("set_hud", info.getAsJsonArray("capabilities").get(9).getAsString());
         assertFalse(info.has("controls"));
         assertEquals(20, info.getAsJsonObject("limits").get("max_action_frames").getAsInt());
     }

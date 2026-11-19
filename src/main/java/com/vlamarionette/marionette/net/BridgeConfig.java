@@ -5,15 +5,8 @@ import java.util.Objects;
 /**
  * Connection settings for the mod-to-host link.
  *
- * <p>G2 reads system properties so an isolated test game directory can select a
- * port without a config file. The property names are intentionally small and
- * machine-friendly:
- *
- * <pre>
- *   -Dvla.bridge.host=127.0.0.1
- *   -Dvla.bridge.port=25580
- *   -Dvla.bridge.retry_ms=2000
- * </pre>
+ * <p>Values come from the client TOML configuration. The bridge host and port
+ * are startup settings; changing them requires a client restart.
  */
 public record BridgeConfig(String host, int port, int retryMillis) {
 
@@ -28,12 +21,5 @@ public record BridgeConfig(String host, int port, int retryMillis) {
         if (retryMillis < 25) {
             throw new IllegalArgumentException("retryMillis must be >= 25: " + retryMillis);
         }
-    }
-
-    public static BridgeConfig fromSystemProperties() {
-        String host = System.getProperty("vla.bridge.host", "127.0.0.1");
-        int port = Integer.getInteger("vla.bridge.port", 25580);
-        int retryMillis = Integer.getInteger("vla.bridge.retry_ms", 2000);
-        return new BridgeConfig(host, port, retryMillis);
     }
 }

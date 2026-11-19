@@ -17,7 +17,7 @@ GLFW 键码、鼠标按钮、鼠标位移和滚轮组合而成。宿主仍然发
 保持同一按住状态。
 
 `QuerySettings.keybinds` 返回当前完整 `KeyMapping` 表。宿主应通过该表取动作对应的
-键，而不是假设固定键码。下表中的 `key.forward`、`key.attack` 等是 vanilla mapping
+键，而不是假设固定键码。下表中的 `key.forward`、`key.attack` 等是 Minecraft 原版 mapping
 名，不是 mod 的动作词表。
 
 ## 动作
@@ -39,7 +39,7 @@ GLFW 键码、鼠标按钮、鼠标位移和滚轮组合而成。宿主仍然发
 | 背包 Shift 点击 | 光标移到槽位，按住 `key.sneak` + 左键 | `QueryInventory` 槽位变化 |
 | 丢弃一个 | 按 `key.drop` | 选中堆数量减一 |
 | 相机 | `mouse.dx/dy` | `State.yaw/pitch` 变化，位置不变 |
-| GUI 光标 | `mouse.dx/dy` + 按钮 | vanilla `Screen` 处理槽位/动作 |
+| GUI 光标 | `mouse.dx/dy` + 按钮 | Minecraft 原版 `Screen` 处理槽位/动作 |
 
 ## 相机换算
 
@@ -63,7 +63,7 @@ yaw/pitch = pixels * sensMod * 1.2      # 普通视角
 screen_pixel = gui_coordinate * gui_scale
 ```
 
-vanilla 背包布局参考：
+Minecraft 原版背包布局参考：
 
 ```text
 left = (gui_width  - 176) / 2
@@ -80,7 +80,9 @@ main slot 9   = (left + 8,       top + 84)
 - 宿主在发送动作前等待 `State.input_locked == true`。session setup 期间采样到的
   `State` 仍可能是 false。
 - 注入输入绕过窗口焦点检查，因此窗口失焦或最小化不阻止输入；GUI/世界语义仍由
-  vanilla `Screen`/`KeyMapping` 决定。
+  Minecraft 原版 `Screen`/`KeyMapping` 决定。
+- HUD 可见性不是原始输入动作；host 用 `SetHud` 设置，`QuerySettings.hide_gui` 读取
+  当前值；Minecraft 原版的 F1 键（显示/隐藏 HUD）仍可改变。
 - 最小化窗口的渲染下限是 30 FPS，保证 5 Hz 采集有足够渲染帧。
 
 ## 非目标

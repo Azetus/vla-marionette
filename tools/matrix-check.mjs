@@ -484,10 +484,15 @@ async function runMinimizedSubset() {
 
 async function run() {
   await waitFor(() => session, "SessionInfo", 30000);
-  check(session.image?.width === 854 && session.image?.height === 480,
-    "image spec 854x480");
+  check((session.image?.width ?? 0) > 0 && (session.image?.height ?? 0) > 0,
+    "image spec");
+  check(session.render?.width === session.image?.width &&
+    session.render?.height === session.image?.height &&
+    session.window?.width === session.image?.width &&
+    session.window?.height === session.image?.height,
+    "render/window match image size");
   for (const capability of ["raw_input", "query_block", "query_inventory",
-    "query_settings", "chat"]) {
+    "query_settings", "set_hud", "chat"]) {
     check((session.capabilities ?? []).includes(capability),
       `capability ${capability}`);
   }

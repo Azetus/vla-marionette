@@ -3,7 +3,7 @@
  * G3 capture check.
  *
  * Listens for the mod (the mod dials out), waits for SessionInfo plus a number
- * of Observation frames, verifies every JPEG decodes to 854x480, estimates the
+ * of Observation frames, verifies every JPEG decodes to the SessionInfo size, estimates the
  * capture rate, and saves one frame for manual inspection.
  *
  * Usage:
@@ -95,8 +95,10 @@ const server = net.createServer((socket) => {
       if (frames === 1) firstReceive = now;
       lastReceive = now;
 
-      if (!size || size.width !== 854 || size.height !== 480) {
-        console.error(`[g3] frame ${header.obs_id} bad JPEG size: ${JSON.stringify(size)}`);
+      const expectedW = session?.image?.width;
+      const expectedH = session?.image?.height;
+      if (!size || size.width !== expectedW || size.height !== expectedH) {
+        console.error(`[g3] frame ${header.obs_id} bad JPEG size: ${JSON.stringify(size)} expected=${expectedW}x${expectedH}`);
         failed = true;
       }
       if (!firstSaved) {

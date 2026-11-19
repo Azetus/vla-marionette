@@ -27,6 +27,7 @@ public final class CaptureScheduler {
     private final AtomicReference<CaptureStatus> status;
 
     private long nextFrameNanos = System.nanoTime();
+    private long nextTick = Long.MIN_VALUE;
     private long nextObsId = 1;
     private long lastResizeMs;
 
@@ -47,13 +48,27 @@ public final class CaptureScheduler {
 
     public void onRenderFrame(RenderFrameEvent.Post event) {
         long now = System.nanoTime();
-        if (now < nextFrameNanos) {
-            return;
+        if (CaptureSpec.mode() == CaptureMode.WALL_CLOCK) {
+            if (now < nextFrameNanos) {
+                return;
+            }
+            nextFrameNanos = now + CaptureSpec.frameIntervalNanos();
+        } else {
+            long tick = ClientClock.tick();
+            if (nextTick == Long.MIN_VALUE) {
+                nextTick = tick;
+            }
+            if (tick < nextTick) {
+                return;
+            }
+            nextTick = tick + CaptureSpec.tickInterval();
         }
-        nextFrameNanos = now + CaptureSpec.FRAME_INTERVAL_NANOS;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc == null || mc.level == null) {
+            if (CaptureSpec.mode() == CaptureMode.TICK_INTERVAL) {
+                nextTick = Long.MIN_VALUE;
+            }
             reject(CaptureStatus.NO_LEVEL);
             return;
         }
@@ -63,7 +78,7 @@ public final class CaptureScheduler {
             reject(CaptureStatus.NO_TARGET);
             return;
         }
-        if (target.width != CaptureSpec.RENDER_WIDTH || target.height != CaptureSpec.RENDER_HEIGHT) {
+        if (target.width != CaptureSpec.width() || target.height != CaptureSpec.height()) {
             requestResize(mc, target);
             reject(CaptureStatus.BAD_SIZE);
             return;
@@ -101,8 +116,8 @@ public final class CaptureScheduler {
         }
         lastResizeMs = nowMs;
         LOG.info("[vla] request render size {}x{} (current {}x{})",
-                CaptureSpec.RENDER_WIDTH, CaptureSpec.RENDER_HEIGHT, target.width, target.height);
-        mc.gameRenderer.resize(CaptureSpec.RENDER_WIDTH, CaptureSpec.RENDER_HEIGHT);
+                CaptureSpec.width(), CaptureSpec.height(), target.width, target.height);
+        mc.gameRenderer.resize(CaptureSpec.width(), CaptureSpec.height());
     }
 
     private void reject(String reason) {

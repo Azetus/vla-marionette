@@ -6,6 +6,7 @@ import com.vlamarionette.marionette.action.McInputInjector;
 import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureSpec;
 import com.vlamarionette.marionette.capture.FrameMailbox;
+import com.vlamarionette.marionette.config.VlaConfig;
 import com.vlamarionette.marionette.mc.WindowLayout;
 import com.vlamarionette.marionette.net.BridgeConfig;
 import com.vlamarionette.marionette.net.InboundRouter;
@@ -19,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
@@ -47,8 +49,10 @@ public final class MarionetteMod {
     private boolean focusPauseDisabled;
 
     public MarionetteMod(IEventBus modBus) {
-        BridgeConfig config = BridgeConfig.fromSystemProperties();
-        transport = new Transport(config, SessionInfo::create);
+        VlaConfig config = VlaConfig.load(FMLPaths.CONFIGDIR.get());
+        CaptureSpec.configure(config.capture());
+        BridgeConfig bridge = config.bridge();
+        transport = new Transport(bridge, SessionInfo::create);
 
         inputInjector = new McInputInjector();
         actionScheduler = new ActionScheduler(inputInjector, receipt -> {
@@ -84,8 +88,7 @@ public final class MarionetteMod {
         });
         transport.start();
 
-        frameMailbox = new FrameMailbox(transport::offerFrame,
-                CaptureSpec.ENCODE_WIDTH, CaptureSpec.ENCODE_HEIGHT, CaptureSpec.JPEG_QUALITY);
+        frameMailbox = new FrameMailbox(transport::offerFrame, CaptureSpec.JPEG_QUALITY);
         frameMailbox.start();
         captureScheduler = new CaptureScheduler(transport, frameMailbox);
         stateReporter = new StateReporter(transport, captureScheduler, inputInjector);

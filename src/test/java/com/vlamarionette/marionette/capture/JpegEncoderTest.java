@@ -12,9 +12,9 @@ import org.junit.jupiter.api.Test;
 class JpegEncoderTest {
 
     @Test
-    void scalesRgbToConfiguredJpeg() throws Exception {
-        int width = CaptureSpec.RENDER_WIDTH;
-        int height = CaptureSpec.RENDER_HEIGHT;
+    void encodesRgbAtTheUnifiedCaptureSize() throws Exception {
+        int width = CaptureSpec.width();
+        int height = CaptureSpec.height();
         byte[] rgb = new byte[width * height * 3];
         int i = 0;
         for (int y = 0; y < height; y++) {
@@ -25,8 +25,7 @@ class JpegEncoderTest {
             }
         }
 
-        byte[] jpeg = JpegEncoder.encode(rgb, width, height,
-                CaptureSpec.ENCODE_WIDTH, CaptureSpec.ENCODE_HEIGHT, CaptureSpec.JPEG_QUALITY);
+        byte[] jpeg = JpegEncoder.encode(rgb, width, height, CaptureSpec.JPEG_QUALITY);
 
         assertTrue(jpeg.length > 4);
         assertEquals((byte) 0xFF, jpeg[0]);
@@ -34,7 +33,7 @@ class JpegEncoderTest {
 
         BufferedImage image = ImageIO.read(new ByteArrayInputStream(jpeg));
         assertNotNull(image);
-        assertEquals(CaptureSpec.ENCODE_WIDTH, image.getWidth());
-        assertEquals(CaptureSpec.ENCODE_HEIGHT, image.getHeight());
+        assertEquals(width, image.getWidth());
+        assertEquals(height, image.getHeight());
     }
 }

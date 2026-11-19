@@ -87,7 +87,8 @@ public final class QueryResponses {
     public static JsonObject settingsOk(int requestId, long tick, String gameMode,
             double sensitivity, boolean invertMouseX, boolean invertMouseY,
             boolean smoothCamera, String cameraType, boolean scoping,
-            int guiScale, int guiWidth, int guiHeight, List<Keybind> keybinds) {
+            boolean hideGui, int guiScale, int guiWidth, int guiHeight,
+            List<Keybind> keybinds) {
         JsonObject json = base("QuerySettingsResult", requestId, true, null, tick);
         if (gameMode == null) {
             json.add("gamemode", JsonNull.INSTANCE);
@@ -100,6 +101,7 @@ public final class QueryResponses {
         json.addProperty("smooth_camera", smoothCamera);
         json.addProperty("camera_type", cameraType);
         json.addProperty("scoping", scoping);
+        json.addProperty("hide_gui", hideGui);
         json.addProperty("gui_scale", guiScale);
         json.addProperty("gui_width", guiWidth);
         json.addProperty("gui_height", guiHeight);

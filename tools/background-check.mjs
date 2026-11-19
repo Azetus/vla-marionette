@@ -39,6 +39,8 @@ let failedReason = null;
 let shutdownAck = null;
 let requestCounter = 100;
 let overallTimer;
+let expectedWidth = 0;
+let expectedHeight = 0;
 
 const measurement = [];
 const allObservations = [];
@@ -177,8 +179,14 @@ function check(condition, label) {
 
 async function run() {
   await waitFor(() => session, "SessionInfo", 30000);
-  check(session.image?.width === 854 && session.image?.height === 480 &&
-    session.image?.pixel_format === "jpeg", "image spec 854x480 jpeg");
+  expectedWidth = Number(session.image?.width ?? 0);
+  expectedHeight = Number(session.image?.height ?? 0);
+  check(expectedWidth > 0 && expectedHeight > 0 &&
+    session.image?.pixel_format === "jpeg", "image spec");
+  check(session.render?.width === expectedWidth &&
+    session.render?.height === expectedHeight &&
+    session.window?.width === expectedWidth &&
+    session.window?.height === expectedHeight, "render/window match image");
   for (const capability of ["observation", "state", "raw_input"]) {
     check((session.capabilities ?? []).includes(capability), `capability ${capability}`);
   }
@@ -216,7 +224,7 @@ async function run() {
   const p95 = percentile(sorted, 0.95);
   const maxInterval = sorted[sorted.length - 1];
   const allJpeg = observations.every((item) =>
-    item.dims && item.dims.width === 854 && item.dims.height === 480);
+    item.dims && item.dims.width === expectedWidth && item.dims.height === expectedHeight);
   let obsIdGaps = 0;
   for (let i = 1; i < observations.length; i++) {
     const gap = observations[i].header.obs_id - observations[i - 1].header.obs_id - 1;
@@ -262,7 +270,7 @@ async function run() {
   check(fps >= 4.5, `capture fps ${fps.toFixed(2)} < 4.5`);
   check(p95 <= 300, `p95 interval ${p95.toFixed(1)} ms > 300`);
   check(maxInterval <= 500, `max interval ${maxInterval.toFixed(1)} ms > 500`);
-  check(allJpeg, "all observations are 854x480 JPEG");
+  check(allJpeg, `all observations are ${expectedWidth}x${expectedHeight} JPEG`);
   check(encodeFailures === 0, `encode failures ${encodeFailures}`);
   check(captureValidAll, "capture valid for every state during measurement");
   check(screenNullAll, "no screen opened during measurement");

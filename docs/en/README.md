@@ -19,15 +19,18 @@ constants.
 
 ## Current implementation
 
-- Capture: 640×360 render target, 854×480 JPEG at quality 0.9, 5 Hz target;
-  minimized windows render at a 30 FPS floor.
+- Capture: unified window/render/JPEG size, 854×480 by default; JPEG quality
+  0.9. Wall-clock 5 Hz by default, with an optional per-N-client-tick mode.
 - State: 10 Hz target with position, rotation, health, ground state, hotbar,
   screen, `input_locked`, `held`, and capture status.
 - Input: per-tick GLFW key codes, mouse buttons 0–7, client-area pixel movement,
   and scroll.
 - Queries: `QueryBlock`, `QueryInventory`, `QuerySettings`; the settings query
-  includes the full current keybind table.
+  includes the full current keybind table and the current `hide_gui`.
 - Chat/commands: one `Chat` message; a leading `/` selects the command path.
+- HUD: the host can set visibility with `SetHud`; Minecraft's F1 key
+  (show/hide HUD) can still change it, and `QuerySettings` reports the actual
+  value.
 - Session: physical input lock, ESC takeover, disconnect cleanup, reconnect as
   a new session, graceful shutdown.
 

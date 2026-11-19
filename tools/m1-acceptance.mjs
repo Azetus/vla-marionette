@@ -38,6 +38,8 @@ let afterFrameMeta = null;
 let lastState = null;
 let before = null;
 let after = null;
+let expectedWidth = 0;
+let expectedHeight = 0;
 let heldDuringAction = null;
 let actionSent = false;
 let startTick = 0;
@@ -77,12 +79,15 @@ function handleMessage(header, body) {
   switch (header.type) {
     case "SessionInfo":
       session = header;
-      if (header.image?.width !== 854 || header.image?.height !== 480 || header.image?.pixel_format !== "jpeg") {
+      expectedWidth = Number(header.image?.width ?? 0);
+      expectedHeight = Number(header.image?.height ?? 0);
+      if (!(expectedWidth > 0) || !(expectedHeight > 0) ||
+          header.image?.pixel_format !== "jpeg") {
         fail("bad image spec");
       }
-      if (header.render?.width !== 640 || header.render?.height !== 360 ||
-          header.window?.width !== 640 || header.window?.height !== 360) {
-        fail("bad render/window spec");
+      if (header.render?.width !== expectedWidth || header.render?.height !== expectedHeight ||
+          header.window?.width !== expectedWidth || header.window?.height !== expectedHeight) {
+        fail("render/window do not match image size");
       }
       for (const capability of ["observation", "state", "raw_input"]) {
         if (!header.capabilities?.includes(capability)) fail(`missing capability: ${capability}`);
@@ -96,7 +101,9 @@ function handleMessage(header, body) {
         fail("invalid JPEG body");
         return;
       }
-      if (dims.width !== 854 || dims.height !== 480) fail(`JPEG ${dims.width}x${dims.height}`);
+      if (dims.width !== expectedWidth || dims.height !== expectedHeight) {
+        fail(`JPEG ${dims.width}x${dims.height}`);
+      }
       if (!firstFrame) {
         firstFrame = Buffer.from(body);
         firstFrameMeta = { ...header, jpeg: dims };

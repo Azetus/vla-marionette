@@ -100,7 +100,7 @@ class QueryResponsesTest {
     @Test
     void serializesSettingsResult() {
         JsonObject json = QueryResponses.settingsOk(9, 1302, "survival", 0.5,
-                false, true, false, "first_person", false, 2, 320, 180,
+                false, true, false, "first_person", false, true, 2, 320, 180,
                 List.of(new QueryResponses.Keybind("key.attack", "mouse", 0),
                         new QueryResponses.Keybind("key.forward", "keysym", 87),
                         new QueryResponses.Keybind("key.smoothCamera", "keysym", null)));
@@ -116,6 +116,7 @@ class QueryResponsesTest {
         assertFalse(json.get("smooth_camera").getAsBoolean());
         assertEquals("first_person", json.get("camera_type").getAsString());
         assertFalse(json.get("scoping").getAsBoolean());
+        assertTrue(json.get("hide_gui").getAsBoolean());
         assertEquals(2, json.get("gui_scale").getAsInt());
         assertEquals(320, json.get("gui_width").getAsInt());
         assertEquals(180, json.get("gui_height").getAsInt());

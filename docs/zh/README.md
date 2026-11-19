@@ -16,14 +16,16 @@ prompt、动作文本解析、模型词表或模型侧换算常数。
 
 ## 当前实现
 
-- 采集：渲染目标 640×360，JPEG 854×480，质量 0.9，目标 5 Hz；最小化窗口渲染下限
-  30 FPS。
+- 采集：窗口、渲染目标和 JPEG 输出使用统一尺寸，默认 854×480；JPEG 质量 0.9。
+  默认墙钟 5 Hz，也可按每 N 个 client tick 采样。
 - 状态：目标 10 Hz，包含位置、朝向、生命、着地、hotbar、screen、
   `input_locked`、`held` 和采集状态。
 - 输入：逐 client tick 的 GLFW 键码、鼠标按钮 0–7、客户区像素位移和滚轮。
 - 查询：`QueryBlock`、`QueryInventory`、`QuerySettings`；设置查询包含完整当前
-  keybind 表。
+  keybind 表和当前 `hide_gui`。
 - 聊天/命令：统一 `Chat`，以 `/` 开头走命令路径。
+- HUD：host 用 `SetHud` 直接设置显示/隐藏；Minecraft 原版的 F1 键仍可改变，`QuerySettings`
+  可读当前值。
 - 会话：物理输入锁、ESC 接管、断线清理、重连新会话、优雅关闭。
 
 ## 非目标

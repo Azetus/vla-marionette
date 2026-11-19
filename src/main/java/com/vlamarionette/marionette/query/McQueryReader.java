@@ -125,6 +125,7 @@ public final class McQueryReader {
                 options.smoothCamera,
                 options.getCameraType().name().toLowerCase(Locale.ROOT),
                 player.isScoping(),
+                options.hideGui,
                 mc.getWindow().getGuiScale(),
                 mc.getWindow().getGuiScaledWidth(),
                 mc.getWindow().getGuiScaledHeight(),
@@ -202,8 +203,8 @@ public final class McQueryReader {
 
     public record SettingsSnapshot(String gameMode, double sensitivity,
             boolean invertMouseX, boolean invertMouseY, boolean smoothCamera,
-            String cameraType, boolean scoping, int guiScale, int guiWidth,
-            int guiHeight, List<QueryResponses.Keybind> keybinds) {
+            String cameraType, boolean scoping, boolean hideGui, int guiScale,
+            int guiWidth, int guiHeight, List<QueryResponses.Keybind> keybinds) {
 
         public SettingsSnapshot {
             keybinds = List.copyOf(keybinds);

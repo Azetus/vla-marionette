@@ -33,10 +33,10 @@ public final class WindowLayout {
             return;
         }
 
-        mc.getWindow().setWindowed(CaptureSpec.RENDER_WIDTH, CaptureSpec.RENDER_HEIGHT);
+        mc.getWindow().setWindowed(CaptureSpec.width(), CaptureSpec.height());
         GLFW.glfwSetWindowAttrib(mc.getWindow().handle(), GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE);
         applied = true;
 
-        LOG.info("[vla] window locked to {}x{}", CaptureSpec.RENDER_WIDTH, CaptureSpec.RENDER_HEIGHT);
+        LOG.info("[vla] window locked to {}x{}", CaptureSpec.width(), CaptureSpec.height());
     }
 }

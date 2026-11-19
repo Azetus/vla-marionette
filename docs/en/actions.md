@@ -19,7 +19,7 @@ together; adjacent chunks keep the same held state when they share a boundary.
 
 `QuerySettings.keybinds` returns the current full `KeyMapping` table. The host
 should take action keys from that table instead of assuming fixed codes. The
-names below (`key.forward`, `key.attack`, ...) are vanilla mapping names, not a
+names below (`key.forward`, `key.attack`, ...) are Minecraft's mapping names, not a
 mod action vocabulary.
 
 ## Actions
@@ -41,7 +41,7 @@ mod action vocabulary.
 | inventory shift-click | move cursor to a slot, hold `key.sneak` + left button | `QueryInventory` slot change |
 | drop one | press `key.drop` | selected stack count decreases by one |
 | camera | `mouse.dx/dy` | `State.yaw/pitch` changes; position unchanged |
-| GUI cursor | `mouse.dx/dy` + button | vanilla `Screen` handles the slot/action |
+| GUI cursor | `mouse.dx/dy` + button | Minecraft's `Screen` handles the slot/action |
 
 ## Camera mapping
 
@@ -67,7 +67,7 @@ A GUI coordinate maps to a client-area pixel as:
 screen_pixel = gui_coordinate * gui_scale
 ```
 
-Reference vanilla inventory layout:
+Reference Minecraft inventory layout:
 
 ```text
 left = (gui_width  - 176) / 2
@@ -86,8 +86,11 @@ carries the deltas.
 - The host waits for `State.input_locked == true` before sending actions. A
   `State` sampled during session setup can still report false.
 - Injected input bypasses the window focus check, so an unfocused or minimized
-  window does not block input; GUI/world semantics remain with vanilla
+  window does not block input; GUI/world semantics remain with Minecraft's
   `Screen`/`KeyMapping`.
+- HUD visibility is not a raw action; the host sets it with `SetHud` and reads
+  the current value from `QuerySettings.hide_gui`; Minecraft's F1 key
+  (show/hide HUD) can still change it.
 - A minimized window renders at a 30 FPS floor to keep 5 Hz capture supplied
   with render frames.
 

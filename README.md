@@ -1,12 +1,12 @@
 # VLA-Marionette
 
+简体中文 | [English](README_EN.md)
+
 一个面向 Minecraft 26.1.2（NeoForge 26.1.2.126）的 NeoForge 客户端 mod。
 
 VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tick 原始输入注入和动作
 回执，把游戏客户端暴露给外部控制器；它不包含模型 prompt、动作文本解析、模型词表或
 模型侧换算常数。
-
-[English README](README_EN.md)
 
 ## 功能
 
@@ -27,17 +27,10 @@ VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tic
 
 ## 文档
 
-中文文档：
-
 - [中文文档索引](docs/zh/README.md)
 - [总体架构](docs/zh/architecture.md)
 - [协议](docs/zh/protocol.md)
 - [动作参考](docs/zh/actions.md)
-
-英文文档：
-
-- [English documentation](docs/en/README.md)
-- [英文 README](README_EN.md)
 
 ## 环境要求
 
@@ -172,7 +165,3 @@ tools/            构建、launcher、测试和诊断脚本
 docs/en/          英文技术文档
 docs/zh/          中文技术文档
 ```
-
-## 许可证
-
-MIT。见 [LICENSE](LICENSE)。

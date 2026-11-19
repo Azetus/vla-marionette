@@ -1,13 +1,13 @@
 # VLA-Marionette
 
+[简体中文](README.md) | English
+
 A NeoForge client-side mod for Minecraft 26.1.2 (NeoForge 26.1.2.126).
 
 VLA-Marionette is a **device layer**. It exposes the game client to an external
 controller through frame capture, state reporting, tick-level raw input
 injection, and action receipts. It does not contain model prompts, action-text
 parsing, model vocabulary, or model-side conversion constants.
-
-[中文 README](README.md)
 
 ## Features
 
@@ -35,17 +35,10 @@ parsing, model vocabulary, or model-side conversion constants.
 
 ## Documentation
 
-English:
-
 - [English documentation](docs/en/README.md)
 - [Architecture](docs/en/architecture.md)
 - [Protocol](docs/en/protocol.md)
 - [Actions](docs/en/actions.md)
-
-Chinese:
-
-- [中文文档索引](docs/zh/README.md)
-- [中文 README](README.md)
 
 ## Requirements
 
@@ -195,7 +188,3 @@ tools/            build, launcher, test, and diagnostic scripts
 docs/en/          English technical documentation
 docs/zh/          Chinese technical documentation
 ```
-
-## License
-
-MIT. See [LICENSE](LICENSE).

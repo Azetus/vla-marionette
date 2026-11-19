@@ -354,6 +354,11 @@ Opening a GUI does not interrupt raw input.
 - Scroll: vanilla `MouseHandler.onScroll`.
 - Injected events bypass the focus check while the injection marker is active;
   they are not interpreted as GUI-specific actions.
+- Modifier keys held by the current frame are also visible to
+  `Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()`, which normally poll
+  the physical GLFW keyboard. Ctrl+Q therefore drops the selected stack, while Q
+  alone drops one item. Direct `InputConstants.isKeyDown` debug paths are not
+  bridged.
 - Continuous mining is just held button-0 frames. Vanilla continues the attack
   only when `screen == null`, `keyAttack` is down and
   `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke hand-mined

@@ -32,6 +32,10 @@ public final class McInputInjector implements InputSink {
 
     @Override
     public void applyFrame(ActionFrame frame) {
+        // Set the whole frame before dispatching edges so same-tick modifier
+        // combinations (Ctrl+Q, Shift+click key paths, ...) see the correct
+        // state regardless of key iteration order.
+        InjectedInputState.setHeld(frame.keys());
         for (int key : new HashSet<>(heldKeys)) {
             if (!frame.keys().contains(key)) {
                 heldKeys.remove(key);
@@ -117,6 +121,7 @@ public final class McInputInjector implements InputSink {
 
     @Override
     public void releaseAll() {
+        InjectedInputState.clear();
         for (int key : new HashSet<>(heldKeys)) {
             int mods = modifiers(heldKeys);
             dispatchKey(key, GLFW.GLFW_RELEASE, mods);

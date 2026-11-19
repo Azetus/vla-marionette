@@ -228,6 +228,27 @@ Consequence: if a future window state leaves the mouse ungrabbed, continuous
 mining will stop even though the button is held. That should be diagnosed
 against the gate rather than assumed to be an input-injection failure.
 
+## D21. Injected modifiers are visible to physical-key polls
+
+Most vanilla input goes through `KeyMapping` or a `Screen` event, both of which
+receive injected `KeyEvent`/`MouseButtonEvent` modifiers. A few paths instead
+poll the physical GLFW keyboard: `InputConstants.isKeyDown` backs
+`Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()`, and injected events
+never change GLFW state. Without a bridge, an injected Ctrl+Q would run
+`player.drop(false)` and drop one item instead of the stack.
+
+`McInputInjector` publishes the current frame's key set through
+`InjectedInputState`. `MinecraftModifierMixin` ORs the matching left/right
+modifier into the three `has*Down()` queries while a bridge session is armed.
+The set is replaced at the start of every frame (before edges are dispatched, so
+same-frame `Ctrl; Q` works) and cleared by `releaseAll()`; it is not a session
+latch and does not affect physical input.
+
+Scope: only the three `Minecraft.has*Down()` methods. Direct
+`InputConstants.isKeyDown` debug paths are not bridged and are outside the
+action matrix. Ctrl+Q stack drop and Ctrl+pick data now follow the raw frame;
+Q alone still drops one item.
+
 ## Known gaps
 
 These are current limitations, not decisions to keep forever:
@@ -237,6 +258,7 @@ These are current limitations, not decisions to keep forever:
 - continuous mining is verified for hand-mined dirt and stone; tool-specific
   mining, block drops and mining multiple blocks in one hold are not separately
   asserted;
+- direct `InputConstants.isKeyDown` debug paths do not see injected modifiers;
 - no freeze is intentional and permanent for v1;
 - query/chat responses are best effort during shutdown;
 - command dispatch is not sandboxed; the host is responsible for what it sends;

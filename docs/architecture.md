@@ -144,6 +144,10 @@ been replaced.
   Closing the pause screen re-arms the lock.
 - `State.input_locked` reflects whether physical input is suppressed; `State.held`
   reports the actual raw held keys/buttons.
+- Injected modifier keys are published per frame (`InjectedInputState`). A mixin
+  ORs them into `Minecraft.hasShiftDown()/hasControlDown()/hasAltDown()`, which
+  otherwise poll the physical GLFW keyboard; this keeps Ctrl+Q stack drop and
+  similar modifier-dependent paths consistent with a physical keyboard.
 - Held button-0 frames drive vanilla `continueAttack`. The vanilla condition also
   needs `mouseHandler.isMouseGrabbed()`; focused and minimized runs broke
   hand-mined dirt and stone (stone through eight chained chunks), so the gate was

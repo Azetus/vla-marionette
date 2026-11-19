@@ -16,6 +16,8 @@ client:
 - 854×480 JPEG observations at a 5 Hz target;
 - periodic state reports with actual held keys/buttons and input-lock status;
 - raw per-tick keyboard/mouse frames with received/applied/ended receipts;
+- modifier combinations such as Ctrl+Q follow the raw frame, including the
+  vanilla paths that poll the physical keyboard;
 - block and inventory queries with per-request asynchronous replies;
 - a unified chat/command entry (`Chat`), with no command filtering;
 - a physical input lock with ESC manual takeover;

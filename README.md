@@ -18,7 +18,7 @@ VLA-Marionette 是**设备层**。它通过画面采集、状态报告、逐 tic
 - **查询**：方块、背包和客户端设置；设置查询返回完整当前 keybind 表和 `hide_gui`。
 - **聊天/命令**：`Chat` 统一发送一行文本，`/` 开头走原版命令路径。
 - **会话控制**：连接后锁定物理输入，ESC 可手动接管；支持断线清理、重连新 session 和
-  优雅关闭。
+  关闭客户端。
 - **HUD 控制**：host 可用 `SetHud` 直接显示/隐藏 HUD；Minecraft 原版的 F1 键
   （显示/隐藏 HUD）也可切换。
 - **FOV**：`[fov]` 启动配置固定世界投影的垂直 FOV（默认 `fixed` 70）；`QuerySettings`

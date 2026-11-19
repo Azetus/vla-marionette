@@ -23,7 +23,7 @@ parsing, model vocabulary, or model-side conversion constants.
 - **Chat/commands**: one `Chat` message per line; a leading `/` selects
   Minecraft's command path.
 - **Session control**: physical input is locked while connected; ESC allows
-  manual takeover; disconnect cleanup, reconnect as a new session, and graceful
+  manual takeover; disconnect cleanup, reconnect as a new session, and client
   shutdown are supported.
 - **HUD control**: the host can show/hide the HUD with `SetHud`, or toggle it
   with Minecraft's F1 key (show/hide HUD).

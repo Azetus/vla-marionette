@@ -35,7 +35,7 @@ constants.
   (`fixed` 70 by default); `QuerySettings` reports `fov`, `fov_effect_scale`, and
   `fov_mode`.
 - Session: physical input lock, ESC takeover, disconnect cleanup, reconnect as
-  a new session, graceful shutdown.
+  a new session, client shutdown.
 
 ## Non-goals
 

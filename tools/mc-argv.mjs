@@ -32,6 +32,8 @@ const gameDir = path.resolve(arg("game-dir", path.join(process.cwd(), "run", "cl
 const world = arg("world", "vla-m1");
 const port = Number(arg("port", "25580"));
 const runId = arg("run-id", `vla-${Date.now()}`);
+const fov = arg("fov", "");
+const fovMode = arg("fov-mode", "");
 
 function fail(message) {
   console.error(`[mc-argv] ${message}`);
@@ -110,6 +112,8 @@ const jvm = [
   "-Dvla.bridge.host=127.0.0.1",
   `-Dvla.bridge.port=${port}`,
   `-Dvla.run.id=${runId}`,
+  ...(fovMode ? [`-Dvla.fov.mode=${fovMode}`] : []),
+  ...(fov ? [`-Dvla.fov.vertical=${fov}`] : []),
   "--sun-misc-unsafe-memory-access=allow",
   "--enable-native-access=ALL-UNNAMED",
   "--add-opens",
@@ -154,6 +158,8 @@ const result = {
   gameDir,
   world,
   port,
+  fov,
+  fovMode,
   runId,
 };
 

@@ -638,6 +638,9 @@ on-demand snapshot, not a 10 Hz state field.
   "smooth_camera": false,
   "camera_type": "first_person",
   "scoping": false,
+  "fov": 70.0,
+  "fov_effect_scale": 1.0,
+  "fov_mode": "fixed",
   "hide_gui": false,
   "gui_scale": 2,
   "gui_width": 427,
@@ -659,6 +662,9 @@ on-demand snapshot, not a 10 Hz state field.
 | `smooth_camera` | smooth-camera option |
 | `camera_type` | `first_person`, `third_person_back`, `third_person_front` |
 | `scoping` | player is currently using a spyglass |
+| `fov` | current vertical FOV of the world projection, in degrees |
+| `fov_effect_scale` | current `options.fovEffectScale`, 0–1 |
+| `fov_mode` | startup FOV mode: `fixed` or `vanilla` |
 | `hide_gui` | current HUD hidden state (`options.hideGui`) |
 | `gui_scale` | current GUI scale |
 | `gui_width/gui_height` | current GUI-scaled dimensions |
@@ -680,6 +686,13 @@ mappings), read-only:
   session guard as the other queries.
 - The values reflect client settings at read time; an options change is visible
   to the next query.
+- `fov` is a vertical FOV, matching Minecraft's own FOV setting; Minecraft derives
+  the horizontal FOV from the aspect ratio. The host can derive it with
+  `2*atan(tan(fov/2) * width/height)` from `SessionInfo.image`.
+- In `fixed` mode `fov` should equal `[fov].vertical`; in `vanilla` mode it is the
+  last rendered value and may change with sprinting, flying, water, death and the
+  spyglass. `fov_mode` comes from the startup config and does not change at
+  runtime.
 - The camera pixel-to-degree mapping stays host-side. For reference, Minecraft's
   applies `sensMod = (sensitivity * 0.6 + 0.2)^3`, then multiplies mouse pixels
   by `sensMod * 1.2` in normal view (and `sensMod * 0.15` while scoping), with
@@ -709,3 +722,36 @@ F1's show/hide toggle semantics.
   explicitly when needed and verify with the query.
 - There is no `HudAck`; a malformed message is ignored and logged without
   changing the HUD.
+
+## 21. FOV
+
+FOV is a startup setting on the same layer as the capture size. It is not a wire
+control message and cannot be changed while the client is running.
+
+```toml
+[fov]
+mode = "fixed"        # fixed | vanilla
+vertical = 70         # 30-110, vertical degrees
+```
+
+- `vertical` is a vertical FOV in degrees, matching Minecraft's own FOV setting;
+  Minecraft derives the horizontal FOV from the image aspect ratio.
+- `mode = "fixed"` pins the world projection to `vertical` from the first frame
+  onward. Sprinting, flying, movement speed, water/lava, death and the spyglass
+  no longer change the image FOV. `options.fov` and `fovEffectScale` no longer
+  affect the world projection.
+- `mode = "vanilla"` keeps Minecraft's own behavior (`options.fov` and dynamic
+  FOV).
+- The default is `fixed` 70; an invalid value is logged and falls back to
+  `vanilla`; changing the setting requires a client restart.
+- Only the world projection is affected: HUD, GUI, hand/item rendering and
+  crosshair reach/picking are unchanged.
+- Third person is still fixed. The spyglass does not zoom in `fixed` mode (its
+  overlay still appears and its mouse-sensitivity reduction still applies).
+- `fixed` does not write `options.txt`; `options.fov` and `fovEffectScale` keep
+  the client's values.
+- There is no `SetFov` message and no corresponding capability. After connecting,
+  the host reads `QuerySettings.fov_mode` / `fov` and should refuse to start an
+  episode on a mismatch; it must not assume the client default.
+- If the host needs the horizontal FOV, it derives it with
+  `2*atan(tan(fov/2) * width/height)` using `SessionInfo.image`.

@@ -26,6 +26,8 @@ prompt、动作文本解析、模型词表或模型侧换算常数。
 - 聊天/命令：统一 `Chat`，以 `/` 开头走命令路径。
 - HUD：host 用 `SetHud` 直接设置显示/隐藏；Minecraft 原版的 F1 键仍可改变，`QuerySettings`
   可读当前值。
+- FOV：`[fov]` 启动配置固定世界投影的垂直 FOV（默认 `fixed` 70）；`QuerySettings`
+  报告 `fov`、`fov_effect_scale` 和 `fov_mode`。
 - 会话：物理输入锁、ESC 接管、断线清理、重连新会话、优雅关闭。
 
 ## 非目标

@@ -86,7 +86,7 @@ public final class QueryResponses {
 
     public static JsonObject settingsOk(int requestId, long tick, String gameMode,
             double sensitivity, boolean invertMouseX, boolean invertMouseY,
-            boolean smoothCamera, String cameraType, boolean scoping,
+            boolean smoothCamera, String cameraType, boolean scoping, Fov fov,
             boolean hideGui, int guiScale, int guiWidth, int guiHeight,
             List<Keybind> keybinds) {
         JsonObject json = base("QuerySettingsResult", requestId, true, null, tick);
@@ -101,6 +101,9 @@ public final class QueryResponses {
         json.addProperty("smooth_camera", smoothCamera);
         json.addProperty("camera_type", cameraType);
         json.addProperty("scoping", scoping);
+        json.addProperty("fov", round(fov.vertical()));
+        json.addProperty("fov_effect_scale", round(fov.effectScale()));
+        json.addProperty("fov_mode", fov.mode());
         json.addProperty("hide_gui", hideGui);
         json.addProperty("gui_scale", guiScale);
         json.addProperty("gui_width", guiWidth);
@@ -164,6 +167,18 @@ public final class QueryResponses {
 
         public Slot {
             Objects.requireNonNull(item, "item");
+        }
+    }
+
+    /**
+     * Current FOV facts: the vertical FOV used for the world projection, the
+     * client's FOV effect scale, and the startup mode ({@code fixed} or
+     * {@code vanilla}).
+     */
+    public record Fov(double vertical, double effectScale, String mode) {
+
+        public Fov {
+            Objects.requireNonNull(mode, "mode");
         }
     }
 

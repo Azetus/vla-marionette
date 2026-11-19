@@ -4,6 +4,7 @@
   "package": "com.vlamarionette.marionette.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "CameraFovMixin",
     "FramerateLimitTrackerMixin",
     "GameRendererResizeMixin",
     "KeyboardHandlerAccessor",

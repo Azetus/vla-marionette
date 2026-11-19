@@ -557,6 +557,9 @@ mod                          host
   "smooth_camera":false,
   "camera_type":"first_person",
   "scoping":false,
+  "fov":70.0,
+  "fov_effect_scale":1.0,
+  "fov_mode":"fixed",
   "hide_gui":false,
   "gui_scale":2,
   "gui_width":427,
@@ -578,6 +581,9 @@ mod                          host
 | `smooth_camera` | 平滑相机选项 |
 | `camera_type` | `first_person`、`third_person_back`、`third_person_front` |
 | `scoping` | 玩家当前是否在用望远镜 |
+| `fov` | 当前世界投影的垂直 FOV（度） |
+| `fov_effect_scale` | `options.fovEffectScale` 当前值，0–1 |
+| `fov_mode` | 启动配置的 FOV 模式：`fixed` 或 `vanilla` |
 | `hide_gui` | 当前 HUD 是否隐藏（`options.hideGui`） |
 | `gui_scale` | 当前 GUI scale |
 | `gui_width/gui_height` | 当前 GUI 缩放后尺寸 |
@@ -593,6 +599,10 @@ mod                          host
 
 - 与其他查询一样在客户端线程读取，使用相同 `request_id`、在途上限和 session 守卫。
 - 值反映读取时的设置；options 改变后下一次查询可见。
+- `fov` 是垂直 FOV，和 Minecraft 自身的 FOV 设置同一语义；水平 FOV 由 host 用
+  `SessionInfo.image` 的宽高换算：`2·atan(tan(fov/2) · width/height)`。
+- `fov` 在 `fixed` 模式下应等于 `[fov].vertical`；`vanilla` 模式下是最近一帧实际值，
+  可能随疾跑/飞行/水下/死亡/望远镜变化。`fov_mode` 来自启动配置，运行中不变。
 - 相机像素→角度换算仍在 host。参考：Minecraft 原版先算
   `sensMod = (sensitivity * 0.6 + 0.2)^3`，普通视角乘 `sensMod * 1.2`，望远镜视角乘
   `sensMod * 0.15`，再应用反转选项，pitch 钳制在 ±90；`smooth_camera` 会改变响应曲线。
@@ -613,3 +623,29 @@ mod                          host
 - 该消息是可选的：host 可以完全不发，HUD 保持客户端当前状态。为了让观察画面
   可复现，建议 host 在需要时显式发送并查询确认。
 - 没有 `HudAck`；形状非法的消息被忽略并记录日志，不改变 HUD。
+
+## 21. FOV
+
+FOV 是启动配置，和采集尺寸同一层；它不是线上控制消息，运行中不能修改。
+
+```toml
+[fov]
+mode = "fixed"        # fixed | vanilla
+vertical = 70         # 30-110, vertical degrees
+```
+
+- `vertical` 是垂直 FOV（度），与 Minecraft 自身的 FOV 设置同一语义；Minecraft 的
+  水平 FOV 由画面宽高比派生。
+- `mode = "fixed"`：把世界投影固定为 `vertical`。从启动后的第一帧起生效；疾跑、飞行、
+  移速、水下/岩浆、死亡和望远镜都不再改变画面 FOV。`options.fov` 和
+  `fovEffectScale` 不再影响世界投影。
+- `mode = "vanilla"`：不覆盖，保留 Minecraft 原版行为（`options.fov` 和动态 FOV）。
+- 默认 `fixed` 70；非法值记录日志并回退 `vanilla`；修改后需要重启客户端。
+- 只影响世界投影：HUD、GUI、手部/物品渲染和准星/交互距离不受影响。
+- 第三人称仍然固定；望远镜在 `fixed` 下不缩放（遮罩仍在，鼠标灵敏度仍按原版降低）。
+- `fixed` 不写 `options.txt`；`options.fov` 和 `fovEffectScale` 保持客户端原值。
+- 没有 `SetFov` 消息，也没有对应 capability。host 连接后查询
+  `QuerySettings.fov_mode` / `fov`，如果与模型要求不符，应拒绝开始 episode；不要假设
+  客户端默认值。
+- host 需要水平 FOV 时用 `2·atan(tan(fov/2) · width/height)` 换算，宽高来自
+  `SessionInfo.image`。

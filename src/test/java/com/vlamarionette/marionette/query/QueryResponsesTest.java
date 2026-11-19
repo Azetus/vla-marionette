@@ -100,7 +100,8 @@ class QueryResponsesTest {
     @Test
     void serializesSettingsResult() {
         JsonObject json = QueryResponses.settingsOk(9, 1302, "survival", 0.5,
-                false, true, false, "first_person", false, true, 2, 320, 180,
+                false, true, false, "first_person", false,
+                new QueryResponses.Fov(70.0, 0.25, "fixed"), true, 2, 320, 180,
                 List.of(new QueryResponses.Keybind("key.attack", "mouse", 0),
                         new QueryResponses.Keybind("key.forward", "keysym", 87),
                         new QueryResponses.Keybind("key.smoothCamera", "keysym", null)));
@@ -116,6 +117,9 @@ class QueryResponsesTest {
         assertFalse(json.get("smooth_camera").getAsBoolean());
         assertEquals("first_person", json.get("camera_type").getAsString());
         assertFalse(json.get("scoping").getAsBoolean());
+        assertEquals(70.0, json.get("fov").getAsDouble());
+        assertEquals(0.25, json.get("fov_effect_scale").getAsDouble());
+        assertEquals("fixed", json.get("fov_mode").getAsString());
         assertTrue(json.get("hide_gui").getAsBoolean());
         assertEquals(2, json.get("gui_scale").getAsInt());
         assertEquals(320, json.get("gui_width").getAsInt());
@@ -162,6 +166,18 @@ class QueryResponsesTest {
         assertFalse(failed.get("ok").getAsBoolean());
         assertEquals("bad_text", failed.get("reason").getAsString());
         assertTrue(failed.get("kind").isJsonNull());
+    }
+
+    @Test
+    void roundsFovFields() {
+        JsonObject json = QueryResponses.settingsOk(10, 1, "creative", 0.5,
+                false, false, false, "first_person", false,
+                new QueryResponses.Fov(70.12345, 0.33333, "vanilla"), false, 1, 320, 180,
+                List.of());
+
+        assertEquals(70.123, json.get("fov").getAsDouble());
+        assertEquals(0.333, json.get("fov_effect_scale").getAsDouble());
+        assertEquals("vanilla", json.get("fov_mode").getAsString());
     }
 
     @Test

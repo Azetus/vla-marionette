@@ -4,6 +4,8 @@ import com.electronwill.nightconfig.core.file.FileConfig;
 import com.electronwill.nightconfig.toml.TomlFormat;
 import com.vlamarionette.marionette.capture.CaptureConfig;
 import com.vlamarionette.marionette.capture.CaptureMode;
+import com.vlamarionette.marionette.mc.FovConfig;
+import com.vlamarionette.marionette.mc.FovMode;
 import com.vlamarionette.marionette.net.BridgeConfig;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,11 +16,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Loads the client TOML configuration.
  *
- * <p>The file is read once at startup. The server host/port, capture size and
- * capture mode are startup settings; a running client should be restarted (or
- * at least reconnected) after changing them.
+ * <p>The file is read once at startup. The server host/port, capture size,
+ * capture mode and FOV are startup settings; a running client must be restarted
+ * after changing them.
  */
-public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
+public record VlaConfig(BridgeConfig bridge, CaptureConfig capture, FovConfig fov) {
 
     public static final String FILE_NAME = "vla_marionette-client.toml";
 
@@ -38,6 +40,12 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
             mode = "wall_clock"
             hz = 5.0
             tick_interval = 4
+
+            [fov]
+            # fixed: force the world projection to `vertical` degrees (30-110).
+            # vanilla: keep Minecraft's own FOV behavior.
+            mode = "fixed"
+            vertical = 70
             """;
 
     public static VlaConfig load(Path configDir) {
@@ -54,6 +62,7 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
 
         BridgeConfig bridge = defaultBridge();
         CaptureConfig capture = defaultCapture();
+        FovConfig fov = defaultFov();
 
         FileConfig toml = FileConfig.of(file, TomlFormat.instance());
         try {
@@ -68,6 +77,11 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
             } catch (RuntimeException e) {
                 LOG.warn("[vla] invalid capture config in {}, using defaults", file, e);
             }
+            try {
+                fov = readFov(toml);
+            } catch (RuntimeException e) {
+                LOG.warn("[vla] invalid fov config in {}, using defaults", file, e);
+            }
         } catch (RuntimeException e) {
             LOG.warn("[vla] could not read config {}, using defaults", file, e);
         } finally {
@@ -75,7 +89,8 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
         }
 
         bridge = applySystemOverrides(bridge);
-        return new VlaConfig(bridge, capture);
+        fov = applyFovSystemOverrides(fov);
+        return new VlaConfig(bridge, capture, fov);
     }
 
     private static BridgeConfig readBridge(FileConfig toml) {
@@ -100,6 +115,50 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
         return new CaptureConfig(width, height, mode, hz, tickInterval);
     }
 
+    /**
+     * Reads the independent {@code [fov]} section.
+     *
+     * <p>A missing section uses the device default (fixed 70). A present but
+     * invalid section falls back to {@link FovMode#VANILLA}: a typo must not
+     * silently force a different FOV. This is deliberately independent of the
+     * capture section so an invalid FOV never resets the capture size.
+     */
+    private static FovConfig readFov(FileConfig toml) {
+        Object rawMode = toml.get("fov.mode");
+        Object rawVertical = toml.get("fov.vertical");
+        if (rawMode == null && rawVertical == null) {
+            return FovConfig.DEFAULT;
+        }
+        if (!(rawMode instanceof String modeValue)) {
+            LOG.warn("[vla] fov.mode is missing or not a string, using vanilla");
+            return FovConfig.VANILLA;
+        }
+        FovMode mode = FovMode.parse(modeValue, null);
+        if (mode == null) {
+            LOG.warn("[vla] unknown fov.mode '{}', using vanilla", modeValue);
+            return FovConfig.VANILLA;
+        }
+        double vertical = FovConfig.DEFAULT_VERTICAL;
+        if (rawVertical != null) {
+            if (!(rawVertical instanceof Number number)) {
+                LOG.warn("[vla] fov.vertical is not a number, using vanilla");
+                return FovConfig.VANILLA;
+            }
+            vertical = number.doubleValue();
+            if (!Double.isFinite(vertical)) {
+                LOG.warn("[vla] fov.vertical is not finite, using vanilla");
+                return FovConfig.VANILLA;
+            }
+        }
+        if (mode == FovMode.FIXED
+                && (vertical < FovConfig.MIN_VERTICAL || vertical > FovConfig.MAX_VERTICAL)) {
+            LOG.warn("[vla] fov.vertical {} is outside {}..{}, using vanilla",
+                    vertical, FovConfig.MIN_VERTICAL, FovConfig.MAX_VERTICAL);
+            return FovConfig.VANILLA;
+        }
+        return new FovConfig(mode, vertical);
+    }
+
     private static BridgeConfig applySystemOverrides(BridgeConfig base) {
         String host = System.getProperty("vla.bridge.host", base.host());
         int port = Integer.getInteger("vla.bridge.port", base.port());
@@ -112,11 +171,47 @@ public record VlaConfig(BridgeConfig bridge, CaptureConfig capture) {
         }
     }
 
+    /**
+     * Launch-time FOV override for tests and experiment launchers.
+     *
+     * <p>Properties are {@code vla.fov.mode} and {@code vla.fov.vertical}. An
+     * invalid override is logged and ignored, keeping the TOML values.
+     */
+    private static FovConfig applyFovSystemOverrides(FovConfig base) {
+        String modeValue = System.getProperty("vla.fov.mode");
+        String verticalValue = System.getProperty("vla.fov.vertical");
+        if (modeValue == null && verticalValue == null) {
+            return base;
+        }
+        try {
+            FovMode mode = modeValue == null
+                    ? base.mode()
+                    : FovMode.parse(modeValue, null);
+            if (mode == null) {
+                throw new IllegalArgumentException("unknown vla.fov.mode: " + modeValue);
+            }
+            double vertical = verticalValue == null
+                    ? base.vertical()
+                    : Double.parseDouble(verticalValue);
+            FovConfig override = new FovConfig(mode, vertical);
+            LOG.info("[vla] fov system override mode={} vertical={}",
+                    override.mode().wireName(), override.vertical());
+            return override;
+        } catch (RuntimeException e) {
+            LOG.warn("[vla] invalid fov system property, using config values", e);
+            return base;
+        }
+    }
+
     private static BridgeConfig defaultBridge() {
         return new BridgeConfig("127.0.0.1", 25580, 2000);
     }
 
     private static CaptureConfig defaultCapture() {
         return new CaptureConfig(854, 480, CaptureMode.WALL_CLOCK, 5.0, 4);
+    }
+
+    private static FovConfig defaultFov() {
+        return FovConfig.DEFAULT;
     }
 }

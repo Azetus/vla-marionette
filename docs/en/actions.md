@@ -91,6 +91,9 @@ carries the deltas.
 - HUD visibility is not a raw action; the host sets it with `SetHud` and reads
   the current value from `QuerySettings.hide_gui`; Minecraft's F1 key
   (show/hide HUD) can still change it.
+- FOV is a startup setting (`[fov]`), not a raw action; `fixed` mode pins the world
+  projection, so the spyglass does not zoom and sprinting/flying/water/death do
+  not change the image FOV; the host reads `QuerySettings.fov` and `fov_mode`.
 - A minimized window renders at a 30 FPS floor to keep 5 Hz capture supplied
   with render frames.
 

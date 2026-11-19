@@ -7,6 +7,7 @@ import com.vlamarionette.marionette.capture.CaptureScheduler;
 import com.vlamarionette.marionette.capture.CaptureSpec;
 import com.vlamarionette.marionette.capture.FrameMailbox;
 import com.vlamarionette.marionette.config.VlaConfig;
+import com.vlamarionette.marionette.mc.FovSpec;
 import com.vlamarionette.marionette.mc.WindowLayout;
 import com.vlamarionette.marionette.net.BridgeConfig;
 import com.vlamarionette.marionette.net.InboundRouter;
@@ -51,6 +52,9 @@ public final class MarionetteMod {
     public MarionetteMod(IEventBus modBus) {
         VlaConfig config = VlaConfig.load(FMLPaths.CONFIGDIR.get());
         CaptureSpec.configure(config.capture());
+        FovSpec.configure(config.fov());
+        LOG.info("[vla] fov mode={} vertical={}",
+                config.fov().mode().wireName(), config.fov().vertical());
         BridgeConfig bridge = config.bridge();
         transport = new Transport(bridge, SessionInfo::create);
 

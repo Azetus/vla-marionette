@@ -1,17 +1,20 @@
 package com.vlamarionette.marionette.query;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.vlamarionette.marionette.mc.FovConfig;
+import com.vlamarionette.marionette.mc.FovMode;
+import com.vlamarionette.marionette.mc.FovSpec;
 import com.vlamarionette.marionette.mixin.KeyMappingAccessor;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import net.minecraft.client.Minecraft;
+import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -110,6 +113,15 @@ public final class McQueryReader {
         }
         Options options = mc.options;
         GameType gameMode = player.gameMode();
+        FovConfig fovConfig = FovSpec.config();
+        Camera camera = mc.gameRenderer.getMainCamera();
+        // The FOV query reports the value the renderer used, not merely the
+        // configured one, so a broken override is visible to the host.
+        double fov = camera != null && camera.isInitialized()
+                ? camera.getFov()
+                : (fovConfig.mode() == FovMode.FIXED
+                        ? fovConfig.vertical()
+                        : options.fov().get().doubleValue());
         List<QueryResponses.Keybind> keybinds = new ArrayList<>();
         for (KeyMapping mapping : options.keyMappings) {
             InputConstants.Key key = ((KeyMappingAccessor) mapping).vla$getKey();
@@ -125,6 +137,9 @@ public final class McQueryReader {
                 options.smoothCamera,
                 options.getCameraType().name().toLowerCase(Locale.ROOT),
                 player.isScoping(),
+                fov,
+                options.fovEffectScale().get(),
+                fovConfig.mode().wireName(),
                 options.hideGui,
                 mc.getWindow().getGuiScale(),
                 mc.getWindow().getGuiScaledWidth(),
@@ -203,10 +218,12 @@ public final class McQueryReader {
 
     public record SettingsSnapshot(String gameMode, double sensitivity,
             boolean invertMouseX, boolean invertMouseY, boolean smoothCamera,
-            String cameraType, boolean scoping, boolean hideGui, int guiScale,
-            int guiWidth, int guiHeight, List<QueryResponses.Keybind> keybinds) {
+            String cameraType, boolean scoping, double fov, double fovEffectScale,
+            String fovMode, boolean hideGui, int guiScale, int guiWidth, int guiHeight,
+            List<QueryResponses.Keybind> keybinds) {
 
         public SettingsSnapshot {
+            Objects.requireNonNull(fovMode, "fovMode");
             keybinds = List.copyOf(keybinds);
         }
     }

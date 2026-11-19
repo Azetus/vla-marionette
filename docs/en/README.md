@@ -31,6 +31,9 @@ constants.
 - HUD: the host can set visibility with `SetHud`; Minecraft's F1 key
   (show/hide HUD) can still change it, and `QuerySettings` reports the actual
   value.
+- FOV: the `[fov]` startup config fixes the world projection's vertical FOV
+  (`fixed` 70 by default); `QuerySettings` reports `fov`, `fov_effect_scale`, and
+  `fov_mode`.
 - Session: physical input lock, ESC takeover, disconnect cleanup, reconnect as
   a new session, graceful shutdown.
 

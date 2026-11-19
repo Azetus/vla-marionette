@@ -39,10 +39,13 @@ Minecraft main/client thread:
 ### `config`
 
 - `VlaConfig`: reads `config/vla_marionette-client.toml` at startup and exposes
-  bridge and capture settings; it writes defaults if missing and falls back with
-  a log on invalid values.
+  bridge, capture and FOV settings; it writes defaults if missing and falls back
+  with a log on invalid values.
 - `CaptureConfig` / `CaptureMode`: unified size, `wall_clock` or `tick` mode,
   wall-clock Hz and tick interval.
+- `FovConfig` / `FovMode`: startup FOV mode (`fixed`/`vanilla`) and vertical FOV;
+  validated independently from the capture section, so an invalid FOV never
+  resets the capture size.
 
 ### `net`
 
@@ -106,11 +109,16 @@ Minecraft main/client thread:
   resizing.
 - `HudController`: applies the host's `SetHud` directly to
   `options.hideGui`; no baseline and no `options.txt` write.
+- `FovSpec`: effective FOV config for this client run; the renderer reads it every
+  frame and `QuerySettings` reads the same value. FOV is a startup setting with no
+  runtime control channel.
 
 ### `mixin`
 
 - `GameRendererResizeMixin`: forces the render target to the configured unified
   size.
+- `CameraFovMixin`: in `fixed` mode, replaces the return value of
+  `Camera.calculateFov` to pin the world projection; panorama mode keeps vanilla.
 - `FramerateLimitTrackerMixin`: raises the minimized-window frame limit from
   Minecraft's 10 FPS to 30 FPS so 5 Hz capture keeps enough render frames.
 - `KeyboardHandlerAccessor` / `MouseHandlerAccessor`: expose Minecraft's private
@@ -176,7 +184,11 @@ been replaced.
 ## Invariants
 
 - No freeze/pause/tick-rate override.
-- HUD is never hidden.
+- HUD defaults to visible; the host can control it with `SetHud`; the mod keeps
+  no baseline and does not write `options.txt`.
+- FOV comes from the startup config; `fixed` pins the world projection,
+  `vanilla` keeps vanilla behavior; there is no runtime FOV control message and
+  no `options.txt` write.
 - Render target/window/JPEG use the unified size, 854×480 by default; quality
   0.9.
 - 5 Hz capture target; 10 Hz state target; 20 TPS logical client tick target.

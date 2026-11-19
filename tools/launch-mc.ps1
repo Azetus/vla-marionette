@@ -4,6 +4,8 @@ param(
     [string]$Jar = "",
     [int]$Port = 0,
     [string]$WorldSource = "",
+    [string]$Fov = "",
+    [string]$FovMode = "",
     [switch]$NoDeploy,
     [switch]$Installed
 )
@@ -19,6 +21,22 @@ if (-not $env:VLA_MC_VERSION_DIR) {
 $versionDir = (Resolve-Path $env:VLA_MC_VERSION_DIR).Path
 if (-not $World) { $World = if ($env:VLA_MC_WORLD) { $env:VLA_MC_WORLD } else { 'vla-m1' } }
 if ($Port -eq 0) { $Port = if ($env:VLA_MC_PORT) { [int]$env:VLA_MC_PORT } else { 25580 } }
+
+# Launch-time FOV override (test/experiment convenience). The TOML config stays
+# the device contract; these become -Dvla.fov.* system properties.
+if ($FovMode -and $FovMode -notin @('fixed', 'vanilla')) {
+    throw "FovMode must be 'fixed' or 'vanilla', got '$FovMode'"
+}
+if ($Fov -and -not $FovMode) { $FovMode = 'fixed' }
+if ($Fov) {
+    $fovValue = 0.0
+    if (-not [double]::TryParse($Fov, [ref]$fovValue) -or
+            -not [double]::IsFinite($fovValue) -or
+            $fovValue -lt 30 -or $fovValue -gt 110) {
+        throw "Fov must be a number in 30..110, got '$Fov'"
+    }
+    if ($FovMode -ne 'fixed') { throw "Fov requires FovMode 'fixed'" }
+}
 if (-not $Installed -and -not $WorldSource) {
     $WorldSource = if ($env:VLA_MC_WORLD_SOURCE) { $env:VLA_MC_WORLD_SOURCE } else { Join-Path $versionDir "saves\$World" }
 }
@@ -111,6 +129,8 @@ $argvArgs = @(
 )
 if ($env:VLA_MC_ASSETS_DIR) { $argvArgs += @('--assets-dir', $env:VLA_MC_ASSETS_DIR) }
 if ($env:VLA_MC_LIBRARIES_DIR) { $argvArgs += @('--libraries-dir', $env:VLA_MC_LIBRARIES_DIR) }
+if ($FovMode) { $argvArgs += @('--fov-mode', $FovMode) }
+if ($Fov) { $argvArgs += @('--fov', $Fov) }
 & node @argvArgs
 if ($LASTEXITCODE -ne 0) { throw 'mc-argv failed' }
 
@@ -136,6 +156,8 @@ $launch = [ordered]@{
     run_dir = $RunDir
     world = $World
     port = $Port
+    fov = $Fov
+    fov_mode = $FovMode
     started_at = (Get-Date).ToString('o')
     argv_file = $argvFile
     stdout = $stdout

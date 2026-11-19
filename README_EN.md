@@ -27,6 +27,9 @@ parsing, model vocabulary, or model-side conversion constants.
   shutdown are supported.
 - **HUD control**: the host can show/hide the HUD with `SetHud`, or toggle it
   with Minecraft's F1 key (show/hide HUD).
+- **FOV**: the `[fov]` startup config fixes the world projection's vertical FOV
+  (`fixed` 70 by default); `QuerySettings` reports `fov`, `fov_effect_scale`, and
+  `fov_mode`.
 - **Minimized operation**: a minimized window keeps the 30 FPS render floor and
   raw input injection, with capture still targeting 5 Hz.
 
@@ -88,14 +91,21 @@ height = 480
 mode = "wall_clock"   # wall_clock | tick
 hz = 5.0
 tick_interval = 4
+
+[fov]
+mode = "fixed"        # fixed | vanilla
+vertical = 70         # 30-110, vertical degrees
 ```
 
 - `width/height` set the window, render target and JPEG output together; all
   three are equal and no scaling is performed.
 - `wall_clock` samples by real time; `tick` samples on the first render frame
   after every N client ticks.
-- Port, size and capture-mode changes apply after a client restart; a running
-  bridge does not reread the file.
+- Port, size, capture-mode and FOV changes apply after a client restart; a
+  running bridge does not reread the file.
+- `[fov].vertical` is the vertical FOV, matching Minecraft's own FOV setting;
+  Minecraft derives the horizontal FOV from the aspect ratio. `fixed` pins the
+  world projection; `vanilla` keeps the client's own behavior.
 - HUD is not in TOML; the host uses `SetHud`, and Minecraft's F1 key
   (show/hide HUD) remains an independent toggle.
 
@@ -122,11 +132,16 @@ Typical commands:
 
 # Run the test host once, or three times with automatic shutdown.
 .\tools\m1-run.ps1 -Installed -Runs 3 -World vla-m1
+
+# Override FOV at launch (test convenience; does not edit the TOML).
+.\tools\launch-mc.ps1 -Installed -World vla-m1 -Fov 30
 ```
 
 `launch-mc.ps1` can also create an isolated `runs/mc-*/game` copy without
-touching the installed saves. `stop-mc.ps1` validates the process id and asks the
-window to close first; forced PID termination is only a timeout fallback.
+touching the installed saves. `-Fov`/`-FovMode` use `-Dvla.fov.*` to override the
+startup config for that launch only. `stop-mc.ps1` validates the process id and
+asks the window to close first; forced PID termination is only a timeout
+fallback.
 
 ## Limits
 
@@ -150,6 +165,10 @@ window to close first; forced PID termination is only a timeout fallback.
   multiplayer servers and long runs are out of scope; tool mining, drops and
   entity interaction are Minecraft's behavior, with the device layer injecting raw
   input only.
+- **FOV**: FOV is a startup setting and cannot be changed at runtime; `fixed`
+  pins the world projection, so sprinting, flying, water, death and the spyglass
+  no longer change the image FOV, while HUD/hand rendering and crosshair
+  reach/picking are unaffected; the host can only read `fov`/`fov_mode`.
 
 ## Layout
 
@@ -162,8 +181,8 @@ src/main/java/com/vlamarionette/marionette/
   action/         raw frames, scheduler, receipts, Minecraft's input injection
   query/          block/inventory reads and chat/command dispatch
   config/         TOML configuration loading
-  mc/             window sizing and HUD control
-  mixin/          render-target, focus bypass, Minecraft's input accessors
+  mc/             window sizing, HUD control and FOV configuration
+  mixin/          render-target, FOV override, focus bypass, Minecraft's input accessors
 src/main/resources/META-INF/neoforge.mods.toml
 src/main/resources/vla_marionette.mixins.json
 src/test/java/    pure unit tests (no game process)

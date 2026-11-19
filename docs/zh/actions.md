@@ -83,6 +83,9 @@ main slot 9   = (left + 8,       top + 84)
   Minecraft 原版 `Screen`/`KeyMapping` 决定。
 - HUD 可见性不是原始输入动作；host 用 `SetHud` 设置，`QuerySettings.hide_gui` 读取
   当前值；Minecraft 原版的 F1 键（显示/隐藏 HUD）仍可改变。
+- FOV 是启动配置（`[fov]`），不是原始输入动作；`fixed` 模式下世界投影固定，望远镜
+  不缩放，疾跑/飞行/水下/死亡不改变画面 FOV；host 用 `QuerySettings.fov` 和
+  `fov_mode` 读取。
 - 最小化窗口的渲染下限是 30 FPS，保证 5 Hz 采集有足够渲染帧。
 
 ## 非目标

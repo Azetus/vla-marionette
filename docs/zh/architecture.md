@@ -36,10 +36,12 @@ Minecraft 主/客户端线程：
 
 ### `config`
 
-- `VlaConfig`：启动时读取 `config/vla_marionette-client.toml`，提供 bridge 和 capture
-  两组设置；缺失文件时写默认值，非法值记录日志并回退。
+- `VlaConfig`：启动时读取 `config/vla_marionette-client.toml`，提供 bridge、capture
+  和 fov 三组设置；缺失文件时写默认值，非法值记录日志并回退。
 - `CaptureConfig` / `CaptureMode`：统一尺寸、`wall_clock` 或 `tick` 模式、墙钟频率和
   tick 间隔。
+- `FovConfig` / `FovMode`：启动 FOV 模式（`fixed`/`vanilla`）和垂直 FOV；独立于
+  capture 段校验，非法 FOV 不会重置尺寸。
 
 ### `net`
 
@@ -91,10 +93,14 @@ Minecraft 主/客户端线程：
 - `WindowLayout`：把窗口锁到统一尺寸并禁止手动缩放。
 - `HudController`：处理 host 的 `SetHud`，直接设置 `options.hideGui`；不记录基线、
   不写 `options.txt`。
+- `FovSpec`：本次客户端运行的生效 FOV 配置；渲染线程每帧读取，`QuerySettings` 读同一值。
+  FOV 是启动配置，没有运行时控制通道。
 
 ### `mixin`
 
 - `GameRendererResizeMixin`：强制渲染目标为配置的统一尺寸。
+- `CameraFovMixin`：`fixed` 模式下替换 `Camera.calculateFov` 的返回值，固定世界投影；
+  panorama 模式保持原版。
 - `FramerateLimitTrackerMixin`：最小化窗口的 Minecraft 原版的 10 FPS 下限改为 30 FPS，
   保证 5 Hz 采集有足够渲染帧。
 - `KeyboardHandlerAccessor` / `MouseHandlerAccessor`：暴露 Minecraft 原版私有输入派发。
@@ -150,7 +156,9 @@ Minecraft 主/客户端线程：
 ## 不变量
 
 - 不冻结/暂停/覆盖 tick rate。
-- 永不隐藏 HUD。
+- HUD 默认不主动隐藏；host 可用 `SetHud` 控制；mod 不维护基线，也不写 `options.txt`。
+- FOV 从启动配置读取；`fixed` 模式固定世界投影，`vanilla` 模式保留原版行为；
+  没有运行时 FOV 控制消息，也不写 `options.txt`。
 - 渲染目标/窗口/JPEG 尺寸统一，默认 854×480；质量 0.9。
 - 采集目标 5 Hz；状态目标 10 Hz；逻辑 client tick 目标 20 TPS。
 - 最小化渲染下限 30 FPS（Minecraft 原版的 10），让 200 ms 采样有 6 帧余量。

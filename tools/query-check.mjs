@@ -23,8 +23,11 @@ const port = Number(arg("port", "25580"));
 const timeoutMs = Number(arg("timeout", "90000"));
 const outDir = path.resolve(arg("out", "runs/query-check"));
 const shutdown = process.argv.includes("--shutdown");
+const expectFov = arg("expect-fov", "");
+const framePath = arg("frame", "") ? path.resolve(arg("frame", "")) : "";
 
 fs.mkdirSync(outDir, { recursive: true });
+if (framePath) fs.mkdirSync(path.dirname(framePath), { recursive: true });
 
 let socketRef = null;
 let buffer = Buffer.alloc(0);
@@ -34,6 +37,7 @@ let finished = false;
 let failedReason = null;
 let shutdownTimer;
 let requestCounter = 100;
+let frameSaved = false;
 
 const pending = new Map();
 const unmatched = [];
@@ -61,18 +65,27 @@ const server = net.createServer((socket) => {
       const total = 4 + frameLen;
       if (buffer.length < total) return;
       const header = JSON.parse(buffer.subarray(8, 8 + headerLen).toString("utf8"));
+      const body = buffer.subarray(8 + headerLen, total);
       buffer = buffer.subarray(total);
-      handleMessage(header);
+      handleMessage(header, body);
       if (finished) return;
     }
   });
   socket.on("error", (error) => finish(error));
 });
 
-function handleMessage(header) {
+function handleMessage(header, body = Buffer.alloc(0)) {
   switch (header.type) {
     case "SessionInfo":
       session = header;
+      break;
+    case "Observation":
+      if (framePath && !frameSaved && body.length > 2 &&
+          body[0] === 0xff && body[1] === 0xd8) {
+        fs.writeFileSync(framePath, body);
+        frameSaved = true;
+        console.log(`[query] saved frame ${framePath} (${body.length} bytes)`);
+      }
       break;
     case "State":
       lastState = header;
@@ -212,6 +225,21 @@ async function run() {
     typeof settings.invert_mouse_y === "boolean", "settings invert flags");
   check(typeof settings.smooth_camera === "boolean" &&
     typeof settings.scoping === "boolean", "settings camera flags");
+  check(["fixed", "vanilla"].includes(settings.fov_mode),
+    `settings fov_mode: ${settings.fov_mode}`);
+  check(typeof settings.fov === "number" && Number.isFinite(settings.fov) &&
+    settings.fov > 0 && settings.fov < 180,
+    `settings fov: ${settings.fov}`);
+  check(typeof settings.fov_effect_scale === "number" &&
+    settings.fov_effect_scale >= 0 && settings.fov_effect_scale <= 1,
+    `settings fov_effect_scale: ${settings.fov_effect_scale}`);
+  if (expectFov) {
+    const expected = Number(expectFov);
+    check(settings.fov_mode === "fixed",
+      `fixed fov expected, got ${settings.fov_mode}`);
+    check(Math.abs(settings.fov - expected) <= 0.01,
+      `settings fov ${settings.fov} == expected ${expected}`);
+  }
   check(typeof settings.hide_gui === "boolean",
     `settings hide_gui: ${settings.hide_gui}`);
   check(["first_person", "third_person_back", "third_person_front"]
